@@ -1,0 +1,9 @@
+# Python tooling (asset slicing only — not needed to run the site)
+.venv/
+
+# Raw source art — large; only the sliced assets/*.png are served
+assets/raw/
+
+# Editor / OS / agent cruft
+.DS_Store
+.claude/

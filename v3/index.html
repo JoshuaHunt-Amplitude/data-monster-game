@@ -112,21 +112,21 @@
 
   #music-toggle {
     position: fixed;
-    top: 32px; left: 34px;     /* left side — clear of the game's HUD on the right */
+    top: 26px; left: 26px;
     z-index: 61;
-    width: 150px;              /* fixed so ▶ PLAY / ❚❚ PAUSE don't resize it */
-    padding: 12px 0;
-    border: 1.5px solid var(--line);
-    background: rgba(10,9,18,0.5);
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid rgba(130,136,137,0.5);
+    border-radius: 50%;
+    background: rgba(10,9,18,0.55);
     color: var(--ink-title);
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-align: center;
+    font-size: 15px;
+    line-height: 1;
     cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
   }
   #music-toggle:hover { color: #fff; border-color: #fff; }
+  #music-toggle.playing { color: var(--amp-light); border-color: rgba(109,155,255,0.6); }
 
   /* ============================ STORY (split) ============================ */
   :root { --stage-w: 42vw; }
@@ -227,7 +227,7 @@
 <body>
 
 <div id="progress"></div>
-<button id="music-toggle">▶ PLAY MUSIC</button>
+<button id="music-toggle" title="Play music" aria-label="Toggle music">🎵</button>
 <audio id="bgm" loop autoplay preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
 
 <!-- ============================ HERO ============================ -->
@@ -252,7 +252,6 @@
     <div class="reading">
 
       <section class="chapter" id="ch-intro">
-        <div class="kicker">Amplitude · EPD × AI</div>
         <h2 class="title">Have you ever tried to <span class="px" data-shape="circle" data-tip="Completing a game as fast as possible — condensing hours of intended playtime into minutes.">speedrun</span> a <span class="px" data-shape="circle">video game?</span></h2>
         <p>Most people think it takes superhuman reflexes — do the same thing every time, just mechanically faster. It's not that simple. Speedrunners spend most of their time studying the route and engineering the system and environment to go faster each time.</p>
         <p>Building our autonomous software factory feels the same. We wanted to see how fast we could get software into the hands of our customers.</p>
@@ -260,7 +259,6 @@
       </section>
 
       <section class="chapter" id="ch-why">
-        <div class="kicker">Why speed matters</div>
         <h2 class="title">Why does <span class="px" data-shape="circle">speed</span> matter, really?</h2>
         <div class="pull">
           <q>AI has made building cheap. Knowing what to build and how it works is the new game.</q>
@@ -272,7 +270,6 @@
       </section>
 
       <section class="chapter" id="ch-gates">
-        <div class="kicker">The constraint</div>
         <h2 class="title">The <span class="px" data-shape="circle">gates</span> slowing us down</h2>
         <p>Building software is untidy, but the path it goes through is less so. An idea becomes code, the code gets validated and reviewed, then it gets deployed to production. For us, that path slowed down at a few specific steps.</p>
         <div class="diagram" data-diagram="pipeline">
@@ -285,7 +282,6 @@
       </section>
 
       <section class="chapter" id="ch-foundations">
-        <div class="kicker">Rebuilding the foundations</div>
         <h2 class="title">Fix how we <span class="px" data-shape="circle">ship</span>, not just what</h2>
         <p>When Stripe built their coding agent, they found something interesting: what's good for agents is good for humans, too. We agree — but we hadn't made it a priority. For years we optimized for <em>what</em> we shipped; agents forced us to finally fix <em>how</em> we ship. The bright side? It also made us improve much faster than expected.</p>
         <div class="stats">
@@ -299,7 +295,6 @@
       </section>
 
       <section class="chapter" id="ch-develop">
-        <div class="kicker">How we develop now</div>
         <h2 class="title">From agent-assisted to <span class="px" data-shape="circle">agent-written</span></h2>
         <p>Improving our DevEx changed how people code in expected and unexpected ways. The obvious: agents write a lot of code now. More surprising: <em>where</em> that code gets written.</p>
         <div class="block"><h3>Agents took the keyboard</h3><p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor and Claude Code agents — but the progress is uneven. The frontend is far along, while the backend lags because agents can't yet validate those changes safely enough for a human to merge with confidence. Nova, our oldest repo, is still largely hand-written. In general, agent-written code tracks with how old the repo is. The goal: increase agent-generated code across surfaces and eventually let agents take a spec and own the whole change.</p></div>
@@ -307,7 +302,6 @@
       </section>
 
       <section class="chapter" id="ch-validation">
-        <div class="kicker">Gate 1</div>
         <h2 class="title"><span class="px" data-shape="circle">Validation</span></h2>
         <p>Validation is where we confirm a change does what it's intended to do. In theory every change should go through it. In practice ours was slow and the first thing to go under tight deadlines — especially for new features, where it felt safer to ship without testing something no one was using yet. The result: features launched with unknown bugs customers found later, after the team had lost context and moved on.</p>
         <p><strong>The code we skip testing today becomes the legacy code of tomorrow.</strong> We had to make validation fast enough not to skip. Automated tests help, but they don't catch what you'd only notice by trying the change yourself — so we made that easy: ship a PR, get a working preview, no local setup.</p>
@@ -320,7 +314,6 @@
       </section>
 
       <section class="chapter" id="ch-review">
-        <div class="kicker">Gate 2</div>
         <h2 class="title"><span class="px" data-shape="circle">Review</span> and approval</h2>
         <p>In the old world every PR needed a human to approve it, but our review culture defaulted to rubber-stamping. Fast, sure — but shallow, and it created social friction anytime someone <em>did</em> give thorough feedback, because it wasn't the norm.</p>
         <p>How did we get here? We'd adapted to a system that doesn't support meaningful review. Without strong automated validation signals from Gate 1, reviewers would have to manually verify behavioral correctness for every PR — unrealistic at any real throughput — so they skim and approve on trust and structure. An arbitrary gate that added time while catching a fraction of the bugs didn't make sense. So we removed it. Sort of. An automated reviewer now runs on every PR and auto-approves low-risk changes based on our risk model.</p>
@@ -336,7 +329,6 @@
       </section>
 
       <section class="chapter" id="ch-culture">
-        <div class="kicker">The hard part</div>
         <h2 class="title">A culture of AI <span class="px" data-shape="circle">transformation</span></h2>
         <p>We improved our systems and tooling and got far, fast. The harder part was creating the culture to get there. Engineers are craftspeople who built careers on clean abstractions, reusable interfaces, and code others can build on — the idea that an agent can do that just as well isn't easy to hear. Getting to broad adoption took two waves: AI fluency (moving from chat-based questions to goal-oriented tasks), then using that fluency to disrupt entire workflows.</p>
         <div class="pull"><q>AI progression is largely not a technical issue. It's a cultural one.</q><span class="cite">— Wade Chambers, Chief Engineering Officer, Amplitude</span></div>
@@ -347,7 +339,6 @@
       </section>
 
       <section class="chapter" id="ch-receipts">
-        <div class="kicker">The receipts</div>
         <h2 class="title">The <span class="px" data-shape="circle">receipts</span></h2>
         <div class="stats">
           <div class="stat"><div class="big">3×</div><div class="lab">more PRs shipped</div></div>
@@ -492,7 +483,11 @@ const bgm = document.getElementById("bgm");
 const mbtn = document.getElementById("music-toggle");
 bgm.volume = 0.45;
 let userPaused = false;
-function setLabel() { mbtn.textContent = bgm.paused ? "▶ PLAY MUSIC" : "❚❚ PAUSE MUSIC"; }
+function setLabel() {
+  const playing = !bgm.paused;
+  mbtn.classList.toggle("playing", playing);
+  mbtn.title = playing ? "Pause music" : "Play music";
+}
 function tryStart(e) {
   if (e && mbtn.contains(e.target)) return; // let the button's own handler decide
   if (userPaused || !bgm.paused) return;

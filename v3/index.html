@@ -431,14 +431,25 @@ addEventListener("keydown", e => {
   }
 });
 
-// music toggle (drop a track at assets/music.mp3 to enable)
+// background music — autoplay-with-sound is blocked until a user gesture,
+// so we start on the first interaction (unless the user has opted out) and
+// keep the toggle in sync.
 const bgm = document.getElementById("bgm");
 const mbtn = document.getElementById("music-toggle");
-let musicOn = false;
+bgm.volume = 0.45;
+let userPaused = false;
+function setLabel() { mbtn.textContent = bgm.paused ? "▶ PLAY MUSIC" : "❚❚ PAUSE MUSIC"; }
+function tryStart(e) {
+  if (e && mbtn.contains(e.target)) return; // let the button's own handler decide
+  if (userPaused || !bgm.paused) return;
+  bgm.play().then(setLabel).catch(() => {});
+}
+["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev =>
+  addEventListener(ev, tryStart, { passive: true }));
 mbtn.addEventListener("click", () => {
-  musicOn = !musicOn;
-  if (musicOn) { bgm.play().catch(() => {}); mbtn.textContent = "❚❚ PAUSE MUSIC"; }
-  else { bgm.pause(); mbtn.textContent = "▶ PLAY MUSIC"; }
+  if (bgm.paused) { userPaused = false; bgm.play().catch(() => {}); }
+  else { userPaused = true; bgm.pause(); }
+  setLabel();
 });
 
 // pipeline diagram

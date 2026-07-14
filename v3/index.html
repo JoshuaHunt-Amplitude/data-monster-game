@@ -146,6 +146,15 @@
   }
   .kicker::before { content: ""; width: 24px; height: 2px; background: var(--amp-blue); }
 
+  /* Geist Pixel (variable) — ELSH axis morphs the pixel element shape:
+     Square 1 · Circle 20 · Grid 40 · Triangle 60 · Line 80. Subheads use Circle. */
+  @font-face {
+    font-family: "Geist Pixel";
+    src: url("../assets/geist-pixel.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+  }
+
   h2.title {
     font-size: clamp(30px, 3.4vw, 44px);
     font-weight: 500;
@@ -154,21 +163,30 @@
     color: var(--ink-head);
     margin-bottom: 22px;
   }
+  /* real Geist Pixel for the inline accent words (hero H1 stays canvas particles) */
+  h2.title .px {
+    font-family: "Geist Pixel", monospace;
+    font-variation-settings: "ELSH" 20;   /* Circle */
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
 
   /* hover-definition tooltip on accent words */
-  .tip { position: relative; cursor: help; border-bottom: 1px dotted rgba(194,208,210,0.5); }
-  .tip::after {
+  .tip, .px[data-tip] { position: relative; cursor: help; }
+  .px[data-tip] { border-bottom: 2px dotted rgba(194,208,210,0.45); }
+  .tip::after, .px[data-tip]::after {
     content: attr(data-tip);
     position: absolute; left: 0; bottom: calc(100% + 10px);
     width: max-content; max-width: 280px;
     padding: 10px 12px;
     background: #16151f; border: 1px solid rgba(130,136,137,0.4); border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-family: var(--sans);
     font-size: 13px; font-weight: 500; line-height: 1.4; letter-spacing: 0; color: var(--ink-head);
     opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
     z-index: 20;
   }
-  .tip:hover::after { opacity: 1; transform: translateY(0); }
+  .tip:hover::after, .px[data-tip]:hover::after { opacity: 1; transform: translateY(0); }
 
   .editorial p { font-size: 19px; font-weight: 500; line-height: 1.5; letter-spacing: -0.02em; color: var(--ink-body); margin-bottom: 20px; }
   .editorial p strong { color: var(--ink-head); font-weight: 600; }
@@ -431,31 +449,8 @@ document.querySelectorAll(".hero-title canvas").forEach((c, idx) => {
   })(performance.now());
 });
 
-// inline accent words in subheads → baseline-aligned static dot-matrix canvas
-document.querySelectorAll("h2.title .px").forEach(span => {
-  const g = computeDots(span.textContent, { shape: span.dataset.shape || "circle", fontSize: 96, cell: 4.2, dotScale: 0.4 });
-  const c = document.createElement("canvas");
-  const ctx = sizeCanvas(c, g.w, g.h);
-  ctx.fillStyle = "#c2d0d2";
-  for (const d of g.dots) stamp(ctx, d.x, d.y, g.r, g.shape);
-  const em = parseFloat(getComputedStyle(span.parentElement).fontSize);
-  c.style.height = em + "px";
-  c.style.width = "auto";
-  c.style.display = "inline-block";
-  c.style.verticalAlign = "baseline";
-  c.style.marginBottom = (-em * 0.22) + "px";
-  c.style.marginInline = "0.04em";
-  // preserve a hover-definition tooltip if the accent word had one
-  if (span.dataset.tip) {
-    const tip = document.createElement("span");
-    tip.className = "tip";
-    tip.dataset.tip = span.dataset.tip;
-    tip.appendChild(c);
-    span.replaceWith(tip);
-  } else {
-    span.replaceWith(c);
-  }
-});
+// inline accent words in subheads now render as real Geist Pixel text (see CSS) —
+// no canvas needed; baseline & spacing come for free from the font.
 
 // entrance: hero subhead at 200ms, scroll indicator at 600ms
 setTimeout(() => document.querySelector(".hero-sub").classList.add("in"), 200);

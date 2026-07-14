@@ -112,7 +112,7 @@
 
   #music-toggle {
     position: fixed;
-    top: 32px; right: 34px;
+    top: 32px; left: 34px;     /* left side — clear of the game's HUD on the right */
     z-index: 61;
     width: 150px;              /* fixed so ▶ PLAY / ❚❚ PAUSE don't resize it */
     padding: 12px 0;
@@ -363,8 +363,7 @@
   </main>
 
   <aside class="stage">
-    <div class="stage-tag">▶ PLAY · click to control</div>
-    <iframe src="../v1/index.html" title="Data Monster side-scroller" scrolling="no"></iframe>
+    <iframe src="game.html" title="Data Monster side-scroller" scrolling="no"></iframe>
   </aside>
 </div>
 
@@ -509,17 +508,8 @@ mbtn.addEventListener("click", () => {
   setLabel();
 });
 
-// hide the embedded game's own chrome (HUD/nav/minimap/title/cards) so nothing
-// overlaps on the right — injected into the same-origin iframe on load
-const gameFrame = document.querySelector(".stage iframe");
-gameFrame.addEventListener("load", () => {
-  try {
-    const d = gameFrame.contentDocument;
-    const s = d.createElement("style");
-    s.textContent = "#hud,#level-nav,#minimap,#title-card,.content-card{display:none!important;}";
-    d.head.appendChild(s);
-  } catch (_) { /* cross-origin: chrome stays visible */ }
-});
+// The embedded game (game.html) is a v3-tailored copy: content cards removed,
+// simplified splash, minimap teleport hint — so no chrome injection needed here.
 
 // pipeline diagram
 const NODES = [

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speedrunning Software — Amplitude EPD × AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* palette (from Figma) */
+    --bg: #0a0912;
+    --ink-title: #828889;   /* hero title + body prose */
+    --ink-head: #c2d0d2;    /* article subheads */
+    --ink-body: #8c92a0;    /* prose (a hair brighter than title gray for legibility) */
+    --line: #828889;
+    --amp-blue: #1e61f0;
+    --amp-light: #6d9bff;
+    --gold: #ffd447;
+    /* SF Pro renders natively on Apple devices; Inter is the cross-platform fallback */
+    --sans: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink-body);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--amp-blue); width: 0; z-index: 60; }
+
+  /* ============================ HERO ============================ */
+  #hero {
+    position: relative;
+    height: 100vh;
+    min-height: 640px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background: #0b0a13 url("../assets/office-bg.png") center 30% / cover no-repeat;
+    opacity: 0.18;
+    filter: grayscale(0.4);
+    mix-blend-mode: luminosity;
+  }
+  .hero-vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 40%, transparent 40%, rgba(10,9,18,0.85) 100%); }
+  .hero-frame {
+    position: absolute;
+    inset: 18px;
+    border: 1.5px solid rgba(130,136,137,0.5);
+    pointer-events: none;
+  }
+
+  .hero-title {
+    position: relative;
+    z-index: 2;
+    padding: 0 clamp(20px, 4vw, 64px);
+  }
+  .hero-title canvas { display: block; width: 92%; max-width: 1340px; height: auto; }
+  .hero-title canvas.software { margin-left: 24%; margin-top: -1.2vw; width: 66%; max-width: 963px; }
+
+  .hero-sub {
+    position: absolute;
+    left: clamp(20px, 4vw, 64px);
+    bottom: 8.5%;
+    z-index: 2;
+    max-width: 300px;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.04em;
+    color: var(--ink-title);
+  }
+
+  .scroll-cta {
+    position: absolute;
+    right: clamp(20px, 4vw, 64px);
+    bottom: 9%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--line);
+    color: var(--ink-title);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    background: rgba(10,9,18,0.35);
+    /* animate up after 0.5s */
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
+  }
+  .scroll-cta.in { opacity: 1; transform: translateY(0); }
+  .scroll-cta:hover { color: #fff; border-color: #fff; }
+  .scroll-cta .arrow { animation: bob 1.6s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+
+  #music-toggle {
+    position: fixed;
+    top: 32px; right: 34px;
+    z-index: 61;
+    padding: 12px 14px;
+    border: 1.5px solid var(--line);
+    background: rgba(10,9,18,0.5);
+    color: var(--ink-title);
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  #music-toggle:hover { color: #fff; border-color: #fff; }
+
+  /* ============================ STORY (split) ============================ */
+  :root { --stage-w: 42vw; }
+  .split { display: flex; align-items: flex-start; border-top: 1.5px solid rgba(130,136,137,0.5); }
+
+  .editorial {
+    flex: 1 1 auto;
+    width: calc(100vw - var(--stage-w));
+    padding: 0 clamp(28px, 6vw, 96px);
+    border-right: 1.5px solid rgba(130,136,137,0.5);
+  }
+  .reading { max-width: 560px; margin: 0 auto; padding: 12vh 0 22vh; }
+
+  .kicker {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amp-light); margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .kicker::before { content: ""; width: 24px; height: 2px; background: var(--amp-blue); }
+
+  h2.title {
+    font-size: clamp(30px, 3.4vw, 44px);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: var(--ink-head);
+    margin-bottom: 22px;
+  }
+
+  .editorial p { font-size: 19px; font-weight: 500; line-height: 1.5; letter-spacing: -0.02em; color: var(--ink-body); margin-bottom: 20px; }
+  .editorial p strong { color: var(--ink-head); font-weight: 600; }
+  .editorial em { color: var(--ink-head); font-style: italic; }
+
+  section.chapter { padding-top: 12vh; scroll-margin-top: 8vh; }
+
+  .pull { border-left: 2px solid var(--amp-blue); padding: 2px 0 2px 24px; margin: 32px 0; }
+  .pull q { font-size: clamp(21px,2.6vw,27px); line-height: 1.32; color: var(--ink-head); font-style: italic; quotes: none; }
+  .pull .cite { display: block; margin-top: 14px; font-size: 12px; letter-spacing: 0.08em; color: var(--ink-body); text-transform: uppercase; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 1px; background: rgba(130,136,137,0.25); border: 1px solid rgba(130,136,137,0.25); border-radius: 10px; overflow: hidden; margin: 28px 0; }
+  .stat { background: #0d0c17; padding: 20px 18px; }
+  .stat .big { font-size: 28px; font-weight: 700; color: var(--gold); letter-spacing: -0.02em; }
+  .stat .lab { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-body); margin-top: 8px; line-height: 1.5; }
+  .stat .was { color: #63677a; text-decoration: line-through; }
+  .stat .delta { color: var(--amp-light); }
+
+  .block { margin: 28px 0; padding-left: 18px; border-left: 1px solid rgba(130,136,137,0.25); }
+  .block h3 { font-size: 16px; font-weight: 700; color: var(--ink-head); margin-bottom: 10px; }
+
+  .diagram { margin: 32px 0; border: 1px dashed rgba(109,155,255,0.4); border-radius: 12px; background: linear-gradient(180deg, rgba(30,97,240,0.06), rgba(30,97,240,0.02)); padding: 22px; }
+  .diagram .dlabel { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--amp-light); margin-bottom: 14px; }
+  .pipeline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pnode { font-size: 12px; font-weight: 600; padding: 9px 13px; border-radius: 7px; background: #12121c; border: 1px solid rgba(130,136,137,0.25); color: var(--ink-head); white-space: nowrap; }
+  .pnode.gate { border-color: rgba(255,212,71,0.55); color: var(--gold); }
+  .parrow { color: #545776; }
+  .plegend { font-size: 12px; color: var(--ink-body); margin-top: 14px; line-height: 1.6; }
+
+  .stage {
+    flex: 0 0 var(--stage-w);
+    width: var(--stage-w);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    background: #05060c;
+    overflow: hidden;
+  }
+  .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .stage .stage-tag {
+    position: absolute; top: 14px; left: 14px; z-index: 5;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-body);
+    background: rgba(5,6,12,0.6); border: 1px solid rgba(130,136,137,0.25); padding: 5px 9px; border-radius: 5px;
+    pointer-events: none;
+  }
+
+  @media (max-width: 900px) {
+    :root { --stage-w: 100vw; }
+    .split { flex-direction: column; }
+    .editorial { width: 100vw; border-right: 0; order: 2; }
+    .stage { order: 1; position: sticky; top: 0; height: 46vh; width: 100vw; flex-basis: auto; border-bottom: 1.5px solid rgba(130,136,137,0.5); }
+    .hero-title canvas.software { margin-left: 14%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button id="music-toggle">▶ PLAY MUSIC</button>
+<audio id="bgm" loop preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
+
+<!-- ============================ HERO ============================ -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-vignette"></div>
+  <div class="hero-frame"></div>
+
+  <div class="hero-title">
+    <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
+    <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
+  </div>
+
+  <p class="hero-sub">The story of how Amplitude built an anonymous AI software factory and increased PRs by 3x</p>
+
+  <a class="scroll-cta" href="#story">SCROLL OR PRESS <span class="arrow">↓</span> TO BEGIN</a>
+</section>
+
+<!-- ============================ STORY ============================ -->
+<div class="split" id="story">
+  <main class="editorial">
+    <div class="reading">
+
+      <section class="chapter" id="ch-intro">
+        <div class="kicker">Amplitude · EPD × AI</div>
+        <h2 class="title">Have you ever tried to <span class="px" data-shape="circle">speedrun</span> a <span class="px" data-shape="circle">video game?</span></h2>
+        <p>Most people think it takes faster reflexes — do the same thing every time, just mechanically faster. It's not that simple. Speedrunners spend most of their time studying the route and engineering the system and environment to go faster each time.</p>
+        <p>Building our autonomous software factory feels the same. We wanted to see how fast we could get software into the hands of our customers.</p>
+        <p><strong>After 6 months, we've 3×'d our PRs.</strong></p>
+      </section>
+
+      <section class="chapter" id="ch-why">
+        <div class="kicker">Why speed matters</div>
+        <h2 class="title">Why does <span class="px" data-shape="circle">speed</span> matter, really?</h2>
+        <div class="pull">
+          <q>AI has made building cheap. Knowing what to build and how it works is the new game.</q>
+          <span class="cite">— Wade Chambers, Chief Engineering Officer, Amplitude</span>
+        </div>
+        <p>Once the software factory gets fast, any idea becomes possible and the real judgment is in knowing which ones are worth trying. You can build the smallest version, put it out there, see if it moved your guiding metric, then do it all over again.</p>
+        <p>The goal is to run smaller experiments and see good ideas surface much faster. With the same headcount, that's how you out-iterate everyone else.</p>
+        <p>By speeding up our software factory, we're moving engineers from <em>in</em> the software loop, doing every step, to <em>on</em> the loop, steering it.</p>
+      </section>
+
+      <section class="chapter" id="ch-gates">
+        <div class="kicker">The constraint</div>
+        <h2 class="title">The <span class="px" data-shape="circle">gates</span> slowing us down</h2>
+        <p>Building software is untidy, but the path it goes through is less so. An idea becomes code, the code gets validated and reviewed, then it gets deployed to production. For us, that path slowed down at a few specific steps.</p>
+        <div class="diagram" data-diagram="pipeline">
+          <div class="dlabel">The pipeline · gates in gold</div>
+          <div class="pipeline" id="pipeline"></div>
+          <div class="plegend">Before our bet, every step was manual except staging deploys. The heaviest gates that stayed manual: <strong>validation</strong>, <strong>review</strong>, and <strong>approval</strong>.</div>
+        </div>
+        <p>This design worked for years because writing code was the slowest part of the system. But agents changed that — a trickle of PRs became a flood, and the manual steps became the stoppage points. This is the <strong>Theory of Constraints</strong>: speed up one part and the goal post moves to the next-slowest step.</p>
+      </section>
+
+      <section class="chapter" id="ch-foundations">
+        <div class="kicker">Rebuilding the foundations</div>
+        <h2 class="title">Fix how we <span class="px" data-shape="circle">ship</span>, not just what</h2>
+        <p>When Stripe built their coding agent, they found what's good for agents is good for humans, too. We agree — but we hadn't made it a priority. Agents forced us to finally fix <em>how</em> we ship.</p>
+        <div class="stats">
+          <div class="stat"><div class="big">&lt;5 min</div><div class="lab"><span class="was">was 25–30 min</span> · <span class="delta">↓ 6×</span><br>Frontend CI</div></div>
+          <div class="stat"><div class="big">2.9 min</div><div class="lab"><span class="was">was 30 min</span> · <span class="delta">↓ ~10×</span><br>Frontend build (p50)</div></div>
+          <div class="stat"><div class="big">28 sec</div><div class="lab"><span class="was">was 3 min</span> · <span class="delta">↓ 6×</span><br>Local app start</div></div>
+        </div>
+        <div class="block"><h3>One containerized environment</h3><p>We replaced local setups with a single containerized definition anyone — human or agent — can bring up with one command. Next: making those environments ephemeral so agents can run in parallel without colliding.</p></div>
+        <div class="block"><h3>CI from 25 minutes to under 5</h3><p>Frontend CI runs every check a PR needs in under five minutes, at a tenth of the cost. When CI is this fast, most engineers stopped coding locally and just started pushing PRs.</p></div>
+        <div class="block"><h3>Automated legacy migrations</h3><p>We pointed agents at the patterns that confused them most and let them run the migrations — consolidating three design systems onto one. Migrations we'd written off for years, finally possible.</p></div>
+      </section>
+
+      <section class="chapter" id="ch-develop">
+        <div class="kicker">How we develop now</div>
+        <h2 class="title">From agent-assisted to <span class="px" data-shape="circle">agent-written</span></h2>
+        <p>Improving our DevEx changed how people code. The obvious: agents write a lot of code now. More surprising: <em>where</em> that code gets written.</p>
+        <div class="block"><h3>Agents took the keyboard</h3><p>Engineers shifted from writing code by hand to steering Cursor and Claude Code agents. The frontend is far along; the backend lags, because agents can't yet validate those changes safely enough to merge with confidence.</p></div>
+        <div class="block"><h3>CI as our new dev environment</h3><p>Once frontend CI dropped under 5 minutes, working locally was no longer the fast option. Because it runs in the cloud, engineers can kick off 20 PRs before logging off and review them the next morning.</p></div>
+      </section>
+
+      <section class="chapter" id="ch-validation">
+        <div class="kicker">Gate 1</div>
+        <h2 class="title"><span class="px" data-shape="circle">Validation</span></h2>
+        <p>Validation is where we confirm a change does what it's supposed to. Ours was slow and the first thing to go under deadlines — so features launched with unknown bugs customers found later. <strong>The code we skip testing today becomes the legacy code of tomorrow.</strong></p>
+        <div class="block"><h3>Frontend previews</h3><p>Ship a PR, get a working preview — built assets on S3, dev tools to flip flags, and a deep link to the exact page your change affects. 2–5 minutes of click-through, no local setup.</p></div>
+        <div class="block"><h3>Backend ephemerals</h3><p>Backend changes get a live, throwaway copy of the infrastructure spun up for the PR, with a link to hit the APIs and see what works before anything merges.</p></div>
+      </section>
+
+      <section class="chapter" id="ch-review">
+        <div class="kicker">Gate 2</div>
+        <h2 class="title"><span class="px" data-shape="circle">Review</span> and approval</h2>
+        <p>Every PR needed a human to approve it, but our culture defaulted to rubber-stamping. An arbitrary gate that added time while catching a fraction of the bugs didn't make sense — so we removed it. Sort of. An automated reviewer now runs on every PR and auto-approves low-risk changes.</p>
+        <div class="stats"><div class="stat"><div class="big">100 → 53 min</div><div class="lab">PR cycle time · p75, main repos · <span class="delta">~2× faster</span></div></div></div>
+        <div class="block"><h3>Automated code review</h3><p>We run Cursor's Bugbot on every PR in CI. It catches bugs most humans used to let through.</p></div>
+        <div class="block"><h3>Risk-based auto-approval</h3><p>A risk model scores each change on size, scope, coverage, and whether it touches public APIs. Low-risk changes with resolved comments merge on their own — and it passes SOC2, which needs documented criteria and logged decisions, not a human clicking approve.</p></div>
+      </section>
+
+      <section class="chapter" id="ch-culture">
+        <div class="kicker">The hard part</div>
+        <h2 class="title">A culture of AI <span class="px" data-shape="circle">transformation</span></h2>
+        <div class="pull"><q>AI progression is largely not a technical issue. It's a cultural one.</q><span class="cite">— Wade Chambers, Chief Engineering Officer, Amplitude</span></div>
+        <div class="block"><h3>Start with the leaders</h3><p>You can't ask engineers to hand work to an agent if their leaders won't. So we made them go first — senior leaders vibe coded in front of the entire EPD org, live, highs and lows and all.</p></div>
+        <div class="block"><h3>Let anyone ship</h3><p>We handed non-engineers the keys. Designers, PMs, even marketers use Claude and Cursor to fix bugs and ship frontend improvements — faster, because there's no handoff.</p><div class="stats"><div class="stat"><div class="big">~5%</div><div class="lab">of PRs now come from non-engineers</div></div></div></div>
+        <div class="block"><h3>Spend where it counts</h3><p>We don't cap AI spend. But the model you pick matters as much as how you run it — our CTO refactored a major backend to proper typings for <strong>$500</strong> with a cheaper model; the same work could have cost tens of thousands.</p></div>
+      </section>
+
+      <section class="chapter" id="ch-receipts">
+        <div class="kicker">The receipts</div>
+        <h2 class="title">What <span class="px" data-shape="circle">speed</span> bought us</h2>
+        <div class="stats">
+          <div class="stat"><div class="big">3×</div><div class="lab">more PRs shipped</div></div>
+          <div class="stat"><div class="big">&lt;5 min</div><div class="lab">Frontend CI <span class="delta">(↓6×)</span></div></div>
+          <div class="stat"><div class="big">100→53 min</div><div class="lab">PR cycle time</div></div>
+          <div class="stat"><div class="big">~5%</div><div class="lab">non-engineer PRs</div></div>
+        </div>
+        <p>AI made building cheap. Knowing what to build — and shipping it before anyone else — is the game now. The Data Monster is still running. →</p>
+      </section>
+
+    </div>
+  </main>
+
+  <aside class="stage">
+    <div class="stage-tag">▶ PLAY · click to control</div>
+    <iframe src="../v1/index.html" title="Data Monster side-scroller" scrolling="no"></iframe>
+  </aside>
+</div>
+
+<script>
+/* ============================================================
+   DOT-MATRIX PIXEL TEXT — reproduces "Geist Pixel" Circle/Triangle:
+   rasterize the word in a heavy sans, then stamp a shape per grid cell.
+   ============================================================ */
+function pixelText(text, { shape = "circle", fontSize = 200, weight = 800, cell = 8, dotScale = 0.42, color = "#828889", tracking = -0.04 } = {}) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  // 1) rasterize the word
+  const off = document.createElement("canvas");
+  const octx = off.getContext("2d");
+  const font = `${weight} ${fontSize}px "SF Pro Display", "Arial", "Inter", sans-serif`;
+  octx.font = font;
+  if ("letterSpacing" in octx) octx.letterSpacing = `${tracking * fontSize}px`;
+  const m = octx.measureText(text);
+  const asc = m.actualBoundingBoxAscent || fontSize * 0.72;
+  const desc = m.actualBoundingBoxDescent || fontSize * 0.28;
+  const w = Math.ceil(m.width) + 4;
+  const h = Math.ceil(asc + desc) + 4;
+  off.width = w; off.height = h;
+  octx.font = font;
+  if ("letterSpacing" in octx) octx.letterSpacing = `${tracking * fontSize}px`;
+  octx.textBaseline = "alphabetic";
+  octx.fillStyle = "#fff";
+  octx.fillText(text, 2, asc + 2);
+  const src = octx.getImageData(0, 0, w, h).data;
+
+  // 2) stamp shapes on a grid where the raster is "on"
+  const cols = Math.floor(w / cell), rows = Math.floor(h / cell);
+  const out = document.createElement("canvas");
+  out.width = cols * cell * dpr;
+  out.height = rows * cell * dpr;
+  const ctx = out.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = color;
+  const r = cell * dotScale;
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      const sx = Math.floor(gx * cell + cell / 2);
+      const sy = Math.floor(gy * cell + cell / 2);
+      if (src[(sy * w + sx) * 4 + 3] > 128) {
+        const cx = gx * cell + cell / 2;
+        const cy = gy * cell + cell / 2;
+        ctx.beginPath();
+        if (shape === "triangle") {
+          ctx.moveTo(cx, cy - r);
+          ctx.lineTo(cx + r, cy + r * 0.85);
+          ctx.lineTo(cx - r, cy + r * 0.85);
+          ctx.closePath();
+        } else {
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+    }
+  }
+  out._logicalW = cols * cell;
+  out._logicalH = rows * cell;
+  return out;
+}
+
+// hero title
+document.querySelectorAll(".hero-title canvas").forEach(c => {
+  const art = pixelText(c.dataset.pixel, { shape: c.dataset.shape, fontSize: 220, cell: 9, color: "#8b9092" });
+  c.width = art.width; c.height = art.height;
+  c.getContext("2d").drawImage(art, 0, 0);
+});
+
+// inline accent words in subheads → replace span with a baseline-aligned canvas
+document.querySelectorAll("h2.title .px").forEach(span => {
+  const art = pixelText(span.textContent, { shape: span.dataset.shape || "circle", fontSize: 96, cell: 4.2, dotScale: 0.4, color: "#c2d0d2" });
+  const c = document.createElement("canvas");
+  c.width = art.width; c.height = art.height;
+  c.getContext("2d").drawImage(art, 0, 0);
+  const em = parseFloat(getComputedStyle(span.parentElement).fontSize);
+  c.style.height = em + "px";
+  c.style.width = "auto";
+  c.style.display = "inline-block";
+  c.style.verticalAlign = "baseline";
+  c.style.marginBottom = (-em * 0.22) + "px";
+  c.style.marginInline = "0.04em";
+  span.replaceWith(c);
+});
+
+// scroll indicator animates in after 0.5s
+setTimeout(() => document.querySelector(".scroll-cta").classList.add("in"), 500);
+
+// scroll progress rail
+const prog = document.getElementById("progress");
+addEventListener("scroll", () => {
+  const h = document.documentElement.scrollHeight - innerHeight;
+  prog.style.width = (h > 0 ? (scrollY / h) * 100 : 0) + "%";
+}, { passive: true });
+
+// ↓ / space begins the story from the hero
+addEventListener("keydown", e => {
+  if ((e.key === "ArrowDown" || e.key === " ") && scrollY < innerHeight * 0.5) {
+    e.preventDefault();
+    document.getElementById("story").scrollIntoView({ behavior: "smooth" });
+  }
+});
+
+// background music — autoplay-with-sound is blocked until a user gesture,
+// so we start on the first interaction (unless the user has opted out) and
+// keep the toggle in sync.
+const bgm = document.getElementById("bgm");
+const mbtn = document.getElementById("music-toggle");
+bgm.volume = 0.45;
+let userPaused = false;
+function setLabel() { mbtn.textContent = bgm.paused ? "▶ PLAY MUSIC" : "❚❚ PAUSE MUSIC"; }
+function tryStart(e) {
+  if (e && mbtn.contains(e.target)) return; // let the button's own handler decide
+  if (userPaused || !bgm.paused) return;
+  bgm.play().then(setLabel).catch(() => {});
+}
+["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev =>
+  addEventListener(ev, tryStart, { passive: true }));
+mbtn.addEventListener("click", () => {
+  if (bgm.paused) { userPaused = false; bgm.play().catch(() => {}); }
+  else { userPaused = true; bgm.pause(); }
+  setLabel();
+});
+
+// pipeline diagram
+const NODES = [
+  { t: "Idea", gate: true }, { t: "Code" }, { t: "Validation", gate: true }, { t: "Review", gate: true }, { t: "Production" },
+];
+const wrap = document.getElementById("pipeline");
+NODES.forEach((n, i) => {
+  const el = document.createElement("span");
+  el.className = "pnode" + (n.gate ? " gate" : "");
+  el.textContent = (n.gate ? "🔒 " : "") + n.t;
+  wrap.appendChild(el);
+  if (i < NODES.length - 1) { const a = document.createElement("span"); a.className = "parrow"; a.textContent = "→"; wrap.appendChild(a); }
+});
+</script>
+</body>
+</html>

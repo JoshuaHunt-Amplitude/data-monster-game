@@ -63,8 +63,9 @@
     z-index: 2;
     padding: 0 clamp(20px, 4vw, 64px);
   }
-  .hero-title canvas { display: block; width: 92%; max-width: 1340px; height: auto; }
-  .hero-title canvas.software { margin-left: 24%; margin-top: -1.2vw; width: 66%; max-width: 963px; }
+  .hero-title canvas { display: block; width: 90%; max-width: 1320px; height: auto; }
+  /* SOFTWARE indented right + a small gap below SPEEDRUNNING (Figma stagger, no overlap) */
+  .hero-title canvas.software { margin-left: 27%; margin-top: 1.4vw; width: 64%; max-width: 950px; }
 
   .hero-sub {
     position: absolute;
@@ -77,7 +78,11 @@
     line-height: 1.25;
     letter-spacing: -0.04em;
     color: var(--ink-title);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
   }
+  .hero-sub.in { opacity: 1; transform: translateY(0); }
 
   .scroll-cta {
     position: absolute;
@@ -109,7 +114,8 @@
     position: fixed;
     top: 32px; right: 34px;
     z-index: 61;
-    padding: 12px 14px;
+    width: 150px;              /* fixed so ▶ PLAY / ❚❚ PAUSE don't resize it */
+    padding: 12px 0;
     border: 1.5px solid var(--line);
     background: rgba(10,9,18,0.5);
     color: var(--ink-title);
@@ -117,6 +123,7 @@
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.06em;
+    text-align: center;
     cursor: pointer;
   }
   #music-toggle:hover { color: #fff; border-color: #fff; }
@@ -206,7 +213,7 @@
 
 <div id="progress"></div>
 <button id="music-toggle">▶ PLAY MUSIC</button>
-<audio id="bgm" loop preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
+<audio id="bgm" loop autoplay preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
 
 <!-- ============================ HERO ============================ -->
 <section id="hero">
@@ -333,11 +340,11 @@
 <script>
 /* ============================================================
    DOT-MATRIX PIXEL TEXT — reproduces "Geist Pixel" Circle/Triangle:
-   rasterize the word in a heavy sans, then stamp a shape per grid cell.
+   rasterize the word in a heavy sans, grid-sample, then stamp a shape
+   per "on" cell. computeDots() returns the target positions so the hero
+   can animate them in from random spots; inline accents render static.
    ============================================================ */
-function pixelText(text, { shape = "circle", fontSize = 200, weight = 800, cell = 8, dotScale = 0.42, color = "#828889", tracking = -0.04 } = {}) {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  // 1) rasterize the word
+function computeDots(text, { shape = "circle", fontSize = 200, weight = 800, cell = 8, dotScale = 0.42, tracking = -0.04 } = {}) {
   const off = document.createElement("canvas");
   const octx = off.getContext("2d");
   const font = `${weight} ${fontSize}px "SF Pro Display", "Arial", "Inter", sans-serif`;
@@ -346,8 +353,7 @@ function pixelText(text, { shape = "circle", fontSize = 200, weight = 800, cell 
   const m = octx.measureText(text);
   const asc = m.actualBoundingBoxAscent || fontSize * 0.72;
   const desc = m.actualBoundingBoxDescent || fontSize * 0.28;
-  const w = Math.ceil(m.width) + 4;
-  const h = Math.ceil(asc + desc) + 4;
+  const w = Math.ceil(m.width) + 4, h = Math.ceil(asc + desc) + 4;
   off.width = w; off.height = h;
   octx.font = font;
   if ("letterSpacing" in octx) octx.letterSpacing = `${tracking * fontSize}px`;
@@ -355,54 +361,62 @@ function pixelText(text, { shape = "circle", fontSize = 200, weight = 800, cell 
   octx.fillStyle = "#fff";
   octx.fillText(text, 2, asc + 2);
   const src = octx.getImageData(0, 0, w, h).data;
-
-  // 2) stamp shapes on a grid where the raster is "on"
   const cols = Math.floor(w / cell), rows = Math.floor(h / cell);
-  const out = document.createElement("canvas");
-  out.width = cols * cell * dpr;
-  out.height = rows * cell * dpr;
-  const ctx = out.getContext("2d");
-  ctx.scale(dpr, dpr);
-  ctx.fillStyle = color;
-  const r = cell * dotScale;
-  for (let gy = 0; gy < rows; gy++) {
-    for (let gx = 0; gx < cols; gx++) {
-      const sx = Math.floor(gx * cell + cell / 2);
-      const sy = Math.floor(gy * cell + cell / 2);
-      if (src[(sy * w + sx) * 4 + 3] > 128) {
-        const cx = gx * cell + cell / 2;
-        const cy = gy * cell + cell / 2;
-        ctx.beginPath();
-        if (shape === "triangle") {
-          ctx.moveTo(cx, cy - r);
-          ctx.lineTo(cx + r, cy + r * 0.85);
-          ctx.lineTo(cx - r, cy + r * 0.85);
-          ctx.closePath();
-        } else {
-          ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        }
-        ctx.fill();
-      }
-    }
+  const dots = [];
+  for (let gy = 0; gy < rows; gy++) for (let gx = 0; gx < cols; gx++) {
+    const sx = Math.floor(gx * cell + cell / 2), sy = Math.floor(gy * cell + cell / 2);
+    if (src[(sy * w + sx) * 4 + 3] > 128) dots.push({ x: gx * cell + cell / 2, y: gy * cell + cell / 2 });
   }
-  out._logicalW = cols * cell;
-  out._logicalH = rows * cell;
-  return out;
+  return { dots, w: cols * cell, h: rows * cell, r: cell * dotScale, shape };
+}
+function stamp(ctx, x, y, r, shape) {
+  ctx.beginPath();
+  if (shape === "triangle") { ctx.moveTo(x, y - r); ctx.lineTo(x + r, y + r * 0.85); ctx.lineTo(x - r, y + r * 0.85); ctx.closePath(); }
+  else ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+function sizeCanvas(c, w, h) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return ctx;
 }
 
-// hero title
-document.querySelectorAll(".hero-title canvas").forEach(c => {
-  const art = pixelText(c.dataset.pixel, { shape: c.dataset.shape, fontSize: 220, cell: 9, color: "#8b9092" });
-  c.width = art.width; c.height = art.height;
-  c.getContext("2d").drawImage(art, 0, 0);
+// hero title — dots assemble from random positions on load
+document.querySelectorAll(".hero-title canvas").forEach((c, idx) => {
+  const g = computeDots(c.dataset.pixel, { shape: c.dataset.shape, fontSize: 220, cell: 9 });
+  const ctx = sizeCanvas(c, g.w, g.h);
+  const color = "#8b9092", DUR = 520, SPREAD = 650;
+  g.dots.forEach(d => {
+    const a = Math.random() * Math.PI * 2, dist = 30 + Math.random() * 140;
+    d.sx = d.x + Math.cos(a) * dist; d.sy = d.y + Math.sin(a) * dist;
+    d.delay = idx * 220 + Math.random() * SPREAD;
+  });
+  const t0 = performance.now();
+  (function frame(now) {
+    const t = now - t0; let done = true;
+    ctx.clearRect(0, 0, g.w, g.h);
+    ctx.fillStyle = color;
+    for (const d of g.dots) {
+      let p = (t - d.delay) / DUR; if (p < 1) done = false;
+      p = p < 0 ? 0 : p > 1 ? 1 : p;
+      const e = 1 - Math.pow(1 - p, 3);
+      ctx.globalAlpha = e;
+      stamp(ctx, d.sx + (d.x - d.sx) * e, d.sy + (d.y - d.sy) * e, g.r * (0.35 + 0.65 * e), g.shape);
+    }
+    ctx.globalAlpha = 1;
+    if (!done) requestAnimationFrame(frame);
+  })(performance.now());
 });
 
-// inline accent words in subheads → replace span with a baseline-aligned canvas
+// inline accent words in subheads → baseline-aligned static dot-matrix canvas
 document.querySelectorAll("h2.title .px").forEach(span => {
-  const art = pixelText(span.textContent, { shape: span.dataset.shape || "circle", fontSize: 96, cell: 4.2, dotScale: 0.4, color: "#c2d0d2" });
+  const g = computeDots(span.textContent, { shape: span.dataset.shape || "circle", fontSize: 96, cell: 4.2, dotScale: 0.4 });
   const c = document.createElement("canvas");
-  c.width = art.width; c.height = art.height;
-  c.getContext("2d").drawImage(art, 0, 0);
+  const ctx = sizeCanvas(c, g.w, g.h);
+  ctx.fillStyle = "#c2d0d2";
+  for (const d of g.dots) stamp(ctx, d.x, d.y, g.r, g.shape);
   const em = parseFloat(getComputedStyle(span.parentElement).fontSize);
   c.style.height = em + "px";
   c.style.width = "auto";
@@ -413,8 +427,9 @@ document.querySelectorAll("h2.title .px").forEach(span => {
   span.replaceWith(c);
 });
 
-// scroll indicator animates in after 0.5s
-setTimeout(() => document.querySelector(".scroll-cta").classList.add("in"), 500);
+// entrance: hero subhead at 200ms, scroll indicator at 600ms
+setTimeout(() => document.querySelector(".hero-sub").classList.add("in"), 200);
+setTimeout(() => document.querySelector(".scroll-cta").classList.add("in"), 600);
 
 // scroll progress rail
 const prog = document.getElementById("progress");
@@ -444,12 +459,26 @@ function tryStart(e) {
   if (userPaused || !bgm.paused) return;
   bgm.play().then(setLabel).catch(() => {});
 }
+// attempt autoplay on load; browsers that block it fall back to first gesture
+bgm.play().then(setLabel).catch(() => setLabel());
 ["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev =>
   addEventListener(ev, tryStart, { passive: true }));
 mbtn.addEventListener("click", () => {
   if (bgm.paused) { userPaused = false; bgm.play().catch(() => {}); }
   else { userPaused = true; bgm.pause(); }
   setLabel();
+});
+
+// hide the embedded game's own chrome (HUD/nav/minimap/title/cards) so nothing
+// overlaps on the right — injected into the same-origin iframe on load
+const gameFrame = document.querySelector(".stage iframe");
+gameFrame.addEventListener("load", () => {
+  try {
+    const d = gameFrame.contentDocument;
+    const s = d.createElement("style");
+    s.textContent = "#hud,#level-nav,#minimap,#title-card,.content-card{display:none!important;}";
+    d.head.appendChild(s);
+  } catch (_) { /* cross-origin: chrome stays visible */ }
 });
 
 // pipeline diagram

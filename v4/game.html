@@ -360,6 +360,15 @@ const PLATES = {
 function loadImg(src) { const i = new Image(); i.src = src; return i; }
 function plateReady(p) { return p && p.bg.complete && p.bg.naturalWidth > 0 && p.ground.complete && p.ground.naturalWidth > 0; }
 
+/* SPEED BOOST gate straddling each zone boundary. Drawn in two halves so the
+   monster passes IN FRONT of the near (left) half and BEHIND the far (right)
+   post — the illusion of running through the gate. split = the x-fraction of
+   the source image where "behind the monster" begins (just left of the right
+   post); openCx = where the archway opening is centered. */
+const gateImg = loadImg("../assets/speed-boost-gate.png");
+const GATE = { W: 1187, H: 777, screenH: 330, openCx: 0.455, split: 0.64, sink: 6 };
+function gateReady() { return gateImg.complete && gateImg.naturalWidth > 0; }
+
 /* ============================================================
    LEVEL CONTENT — two editorial cards per zone
    ============================================================ */
@@ -497,6 +506,8 @@ let runLatch = { left: false, right: false };
 let lastTap = { left: -1e9, right: -1e9 };
 let wantJump = false;
 let started = false;
+let runMult = 1;              // ×1.5 each time the monster runs through a gate (capped)
+const RUN_MULT_MAX = 5;
 
 function pressDir(dir) {
   const now = performance.now();
@@ -1150,37 +1161,41 @@ function drawScene(camX, time) {
     if (sxEnd > sxStart) drawGroundSegment(sxStart, sxEnd, zi, camX);
   }
 
-  // checkpoint pillars dress the hard seam at each zone boundary; each is a
-  // story gate (Validation · Review · Approval) so the game mirrors the article
-  for (let k = 1; k < ZONES.length; k++) {
-    const bx = k * ZONE_LEN - camX;
-    if (bx > -160 && bx < W + 160) drawBoundaryPillar(bx, time, k);
-  }
+  // pipeline gates at each zone boundary — back (near) halves, drawn behind the
+  // monster. The seam mask + right half are drawn in drawGatesFront() (over him).
+  drawGates(camX, "back");
 
   // goal flag
   drawGoalFlag(camX);
 }
 
-// Stone checkpoint pillar straddling a zone boundary, masking the scenery
-// seam from the skyline down through the ground band.
-function drawBoundaryPillar(bx, time, k) {
-  px(bx - 26, groundY - 310, 52, 310 + (H - groundY), "#8a6448");
-  px(bx - 26, groundY - 310, 8, 310 + (H - groundY), "#a37a55");   // lit edge
-  px(bx + 12, groundY - 310, 14, 310 + (H - groundY), "#6a4a30");  // shaded edge
-  ctx.fillStyle = "rgba(60,38,20,0.5)";
-  for (let y = groundY - 280; y < H; y += 46) ctx.fillRect(bx - 26, y, 52, 4);
-  px(bx - 36, groundY - 330, 72, 22, "#6e4e34");                    // cap
-  px(bx - 36, groundY - 334, 72, 6, "#8a6448");
-  // pennant
-  px(bx - 3, groundY - 400, 6, 70, "#d8dcf0");
-  const wave = Math.sin(time * 0.004) * 4;
-  ctx.fillStyle = "#1e61f0";
-  ctx.beginPath();
-  ctx.moveTo(bx + 3, groundY - 400);
-  ctx.lineTo(bx + 52, groundY - 386 + wave);
-  ctx.lineTo(bx + 3, groundY - 372);
-  ctx.fill();
-  // (v4: no gate plaque — each level's art already names its pipeline stage)
+// Draw the SPEED BOOST gates at every zone boundary. part="back" draws a seam
+// mask + the left half (behind the monster); part="front" draws the right post
+// (over the monster) so he appears to pass through the gate.
+function drawGates(camX, part) {
+  if (!gateReady()) return;
+  const gh = GATE.screenH, s = gh / GATE.H, gw = GATE.W * s;
+  const top = groundY - gh + GATE.sink;
+  const sp = GATE.split;
+  for (let k = 1; k < ZONES.length; k++) {
+    const bx = k * ZONE_LEN - camX;                 // boundary (opening center) on screen
+    if (bx < -gw || bx > W + gw) continue;
+    const left = bx - GATE.openCx * gw;
+    if (part === "back") {
+      // seam mask: hide the hard plate cut behind the archway opening
+      const grad = ctx.createLinearGradient(bx - 55, 0, bx + 55, 0);
+      grad.addColorStop(0, "rgba(6,8,16,0)");
+      grad.addColorStop(0.5, "rgba(6,8,16,0.92)");
+      grad.addColorStop(1, "rgba(6,8,16,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(bx - 55, top + gh * 0.12, 110, H - (top + gh * 0.12));
+      // left half of the gate
+      ctx.drawImage(gateImg, 0, 0, GATE.W * sp, GATE.H, left, top, gw * sp, gh);
+    } else {
+      // right half (right post + chevron panel) — occludes the monster
+      ctx.drawImage(gateImg, GATE.W * sp, 0, GATE.W * (1 - sp), GATE.H, left + gw * sp, top, gw * (1 - sp), gh);
+    }
+  }
 }
 
 function drawGoalFlag(camX) {
@@ -1280,8 +1295,18 @@ function loop(now) {
   const running = (dir === 1 && runLatch.right) || (dir === -1 && runLatch.left);
   if (dir !== 0 && !ducking) {
     player.facing = dir;
-    player.x += dir * (running ? RUN_SPEED : WALK_SPEED) * dt;
+    const prevX = player.x;
+    player.x += dir * (running ? RUN_SPEED * runMult : WALK_SPEED) * dt;
     player.x = Math.max(120, Math.min(WORLD_LENGTH - 120, player.x));
+    // running through a gate: sparkle burst + 1.5× run speed
+    for (let k = 1; k < ZONES.length; k++) {
+      const gx = k * ZONE_LEN;
+      if ((prevX < gx && player.x >= gx) || (prevX > gx && player.x <= gx)) {
+        spawnPoof(gx, groundY);
+        if (running) runMult = Math.min(runMult * 1.5, RUN_MULT_MAX);
+        break;
+      }
+    }
   }
 
   // vertical — one jump from the ground, one more mid-air (double jump)
@@ -1328,6 +1353,7 @@ function loop(now) {
 
   drawScene(camX, now);
   if (!teleport) drawPlayer(camX, now);
+  drawGates(camX, "front");   // right posts occlude the monster → "through the gate"
   updateSparks(dt, camX);
   requestAnimationFrame(loop);
 }

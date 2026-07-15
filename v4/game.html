@@ -339,11 +339,11 @@ const PLAYER_H = 150;                     // on-screen monster height
 const GROUND_FRAC = 0.82;
 
 const ZONES = [
-  { name: "LEVEL 1 · THE OFFICE",     skyTop: "#6d7393", skyBot: "#364880" },
-  { name: "LEVEL 2 · LOMBARD STREET", skyTop: "#2ca9fc", skyBot: "#83d9f5" },
-  { name: "LEVEL 3 · GOLDEN GATE",    skyTop: "#1a9bfc", skyBot: "#6dd5fb" },
-  { name: "LEVEL 4 · PAINTED LADIES", skyTop: "#149ff9", skyBot: "#8fc4e8" },
-  { name: "LEVEL 5 · AI ENGINEERING DECK", skyTop: "#163382", skyBot: "#243ec8" },
+  { name: "LEVEL 1 · IDEA",       skyTop: "#141024", skyBot: "#0a0820" },
+  { name: "LEVEL 2 · CODE",       skyTop: "#0d1f38", skyBot: "#000922" },
+  { name: "LEVEL 3 · VALIDATION", skyTop: "#183028", skyBot: "#071521" },
+  { name: "LEVEL 4 · REVIEW",     skyTop: "#12241f", skyBot: "#030b17" },
+  { name: "LEVEL 5 · PRODUCTION", skyTop: "#145eaf", skyBot: "#41a6db" },
 ];
 
 /* Painted level plates (art by Joshua's generator, sliced by tools/slice_*.py).
@@ -351,11 +351,11 @@ const ZONES = [
    ground = repeating wall strip drawn at parallax 1 under the player's feet.
    fill = color continuing the wall below the strip on tall windows. */
 const PLATES = {
-  0: { bg: loadImg("../assets/office-bg.png"), ground: loadImg("../assets/office-ground.png"), fill: "#0a132d" },
-  1: { bg: loadImg("../assets/lombard-bg.png"), ground: loadImg("../assets/lombard-ground.png"), fill: "#202233" },
-  2: { bg: loadImg("../assets/goldengate-bg.png"), ground: loadImg("../assets/goldengate-ground.png"), fill: "#272636" },
-  3: { bg: loadImg("../assets/paintedladies-bg.png"), ground: loadImg("../assets/paintedladies-ground.png"), fill: "#0a2b2a" },
-  4: { bg: loadImg("../assets/aideck-bg.png"), ground: loadImg("../assets/aideck-ground.png"), fill: "#030921" },
+  0: { bg: loadImg("../assets/idea-bg.png"),       ground: loadImg("../assets/idea-ground.png"),       fill: "#000820" },
+  1: { bg: loadImg("../assets/code-bg.png"),       ground: loadImg("../assets/code-ground.png"),       fill: "#000922" },
+  2: { bg: loadImg("../assets/validation-bg.png"), ground: loadImg("../assets/validation-ground.png"), fill: "#071521" },
+  3: { bg: loadImg("../assets/review-bg.png"),     ground: loadImg("../assets/review-ground.png"),     fill: "#030b17" },
+  4: { bg: loadImg("../assets/production-bg.png"), ground: loadImg("../assets/production-ground.png"), fill: "#141b28" },
 };
 function loadImg(src) { const i = new Image(); i.src = src; return i; }
 function plateReady(p) { return p && p.bg.complete && p.bg.naturalWidth > 0 && p.ground.complete && p.ground.naturalWidth > 0; }
@@ -1163,7 +1163,6 @@ function drawScene(camX, time) {
 
 // Stone checkpoint pillar straddling a zone boundary, masking the scenery
 // seam from the skyline down through the ground band.
-const GATE_LABELS = ["VALIDATION", "REVIEW", "APPROVAL", "SHIP"];
 function drawBoundaryPillar(bx, time, k) {
   px(bx - 26, groundY - 310, 52, 310 + (H - groundY), "#8a6448");
   px(bx - 26, groundY - 310, 8, 310 + (H - groundY), "#a37a55");   // lit edge
@@ -1181,25 +1180,7 @@ function drawBoundaryPillar(bx, time, k) {
   ctx.lineTo(bx + 52, groundY - 386 + wave);
   ctx.lineTo(bx + 3, groundY - 372);
   ctx.fill();
-  // gate plaque — labels the pillar with its story gate
-  const lab = GATE_LABELS[k - 1];
-  if (lab) {
-    const ship = lab === "SHIP";
-    ctx.save();
-    ctx.font = "700 13px ui-monospace, 'SF Mono', Menlo, monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const tw = ctx.measureText(lab).width;
-    const py = groundY - 292, pw = tw + 20, ph = 24;
-    ctx.fillStyle = "rgba(10,9,18,0.9)";
-    ctx.fillRect(bx - pw / 2, py, pw, ph);
-    ctx.strokeStyle = ship ? "#4fd39a" : "#ffd447";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(bx - pw / 2, py, pw, ph);
-    ctx.fillStyle = ship ? "#4fd39a" : "#ffd447";
-    ctx.fillText(lab, bx, py + ph / 2 + 1);
-    ctx.restore();
-  }
+  // (v4: no gate plaque — each level's art already names its pipeline stage)
 }
 
 function drawGoalFlag(camX) {

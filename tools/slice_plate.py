@@ -11,6 +11,12 @@ import numpy as np
 from PIL import Image
 
 CONFIGS = {
+    # v4 pipeline-stage levels (Joshua, 2026-07-15) — all 2698×583, same layout
+    "idea":       {"src": "assets/raw/idea-level.png",       "out": "idea",       "tile_x": (1578, 1878), "grass_top": 489},
+    "code":       {"src": "assets/raw/code-level.png",       "out": "code",       "tile_x": (618, 918),   "grass_top": 454},
+    "validation": {"src": "assets/raw/validation-level.png", "out": "validation", "tile_x": (1315, 1615), "grass_top": 449},
+    "review":     {"src": "assets/raw/review-level.png",     "out": "review",     "tile_x": (2119, 2419), "grass_top": 457},
+    "production": {"src": "assets/raw/production-level.png",  "out": "production", "tile_x": (2310, 2610), "grass_top": 471},
     "aideck": {
         "src": "assets/raw/amplitude final office.png",
         "out": "aideck",

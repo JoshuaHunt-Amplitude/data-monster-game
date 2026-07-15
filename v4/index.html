@@ -535,9 +535,10 @@ mbtn.addEventListener("click", () => {
 // ── Connect the story to the game ──────────────────────────────────────────
 // Each chapter maps to a game level; as a chapter scrolls to center, we tell
 // the game to teleport the monster there. One step of the story = one level.
+// levels ARE the pipeline stages: 0 IDEA · 1 CODE · 2 VALIDATION · 3 REVIEW · 4 PRODUCTION
 const CHAPTER_ZONE = {
   "ch-intro": 0, "ch-why": 0, "ch-gates": 1, "ch-foundations": 1,
-  "ch-develop": 2, "ch-validation": 3, "ch-review": 3, "ch-culture": 4, "ch-receipts": 4,
+  "ch-develop": 1, "ch-validation": 2, "ch-review": 3, "ch-culture": 3, "ch-receipts": 4,
 };
 const gameFrame = document.querySelector(".stage iframe");
 let currentZone = -1;

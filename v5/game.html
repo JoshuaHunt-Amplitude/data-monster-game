@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amplitude EPD × AI — Data Monster World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Geist+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --amp-blue: #1e61f0;
+    --amp-light: #6d9bff;
+    --card-bg: rgba(13, 12, 40, 0.9);
+    --text: #eef0ff;
+    --font-main: "Inter", system-ui, -apple-system, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #1c0f45;
+    font-family: var(--font-main);
+    color: var(--text);
+  }
+
+  #game {
+    position: fixed;
+    inset: 0;
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  #world {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    will-change: transform;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .content-card {
+    position: absolute;
+    width: 380px;
+    padding: 22px 24px;
+    background: var(--card-bg);
+    border: 3px solid var(--amp-light);
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px #0b0524, 6px 6px 0 rgba(0,0,0,0.45);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: auto;
+  }
+
+  .content-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .content-card .kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amp-light);
+    margin-bottom: 8px;
+  }
+
+  .content-card h2 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin-bottom: 10px;
+  }
+
+  .content-card p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(238, 240, 255, 0.92);
+  }
+
+  .content-card .stat {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 700;
+    color: #ffd447;
+    margin: 6px 0 6px;
+  }
+
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 3;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-shadow: 0 1px 3px rgba(11, 5, 36, 0.9);
+    pointer-events: none;
+  }
+
+  #level-nav {
+    position: fixed;
+    top: 44px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 3;
+    font-family: inherit;
+  }
+
+  #level-nav .nav-label {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--amp-light);
+    text-shadow: 0 1px 3px rgba(11, 5, 36, 0.9);
+    margin-right: 2px;
+  }
+
+  #level-nav button {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 12px;
+    padding: 5px 9px;
+    color: var(--text);
+    background: rgba(16, 8, 48, 0.75);
+    border: 2px solid var(--amp-light);
+    border-radius: 3px;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+  }
+
+  #level-nav button:hover {
+    background: var(--amp-blue);
+    border-color: #fff;
+  }
+
+  #level-nav button:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+  }
+
+  /* progress states: where you are, where you've been */
+  #level-nav button.visited {
+    background: rgba(109, 155, 255, 0.3);
+  }
+
+  #level-nav button.current {
+    background: var(--amp-blue);
+    border-color: #fff;
+  }
+
+  #minimap {
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 34px;
+    z-index: 3;
+    cursor: pointer;
+  }
+
+  @media (pointer: coarse) {
+    #minimap { bottom: 104px; }
+  }
+
+  #title-card {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    text-align: center;
+    background: radial-gradient(ellipse at center, rgba(28,15,69,0.35), rgba(11,5,36,0.92));
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+  }
+
+  #title-card.hidden { opacity: 0; }
+
+  #title-card h1 {
+    font-size: clamp(30px, 5vw, 60px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
+    margin-bottom: 12px;
+  }
+
+  #title-card .sub {
+    font-family: var(--font-mono);
+    font-size: clamp(12px, 1.5vw, 16px);
+    color: var(--amp-light);
+  }
+
+  /* controls live down in the ground band, steady (no blink) */
+  #title-card .prompt {
+    position: absolute;
+    bottom: 6.5%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 2.1;
+    letter-spacing: 0.5px;
+    color: rgba(238, 240, 255, 0.95);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  }
+
+  #touch-controls { display: none; }
+  @media (pointer: coarse) {
+    #touch-controls {
+      display: flex;
+      position: fixed;
+      bottom: 18px;
+      left: 0; right: 0;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 22px;
+      z-index: 5;
+    }
+    #touch-controls .pad { display: flex; gap: 14px; }
+    #touch-controls button {
+      width: 70px; height: 70px;
+      font-size: 28px;
+      background: rgba(16,8,48,0.7);
+      color: var(--text);
+      border: 3px solid var(--amp-light);
+      border-radius: 8px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<div id="world"></div>
+
+<div id="hud">
+  <span id="hud-zone">LEVEL 1 · THE OFFICE</span>
+  <span id="hud-progress">0%</span>
+</div>
+
+<nav id="level-nav">
+  <span class="nav-label">SKIP TO</span>
+  <button data-zone="0">LEVEL 1</button>
+  <button data-zone="1">LEVEL 2</button>
+  <button data-zone="2">LEVEL 3</button>
+  <button data-zone="3">LEVEL 4</button>
+  <button data-zone="4">LEVEL 5</button>
+  <button id="btn-nom" title="data nom nom (E)">🍪</button>
+</nav>
+
+<canvas id="minimap" width="600" height="68" title="Click to jump to a level"></canvas>
+<div id="minimap-hint">click to teleport</div>
+
+<style>
+  /* --- v3 embed tweaks --- */
+  .content-card { display: none !important; }   /* the story lives in the article on the left */
+  #minimap-hint {
+    position: fixed; bottom: 20px; right: calc(50% + 158px);
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--amp-light);
+    text-shadow: 0 1px 3px rgba(11,5,36,0.9); white-space: nowrap; z-index: 3; pointer-events: none;
+  }
+  #title-card h1 { font-size: clamp(26px, 4vw, 44px); }
+  #title-card .play-hint {
+    margin-top: 24px; font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 1.5px; color: var(--amp-light); animation: emb-blink 1.15s steps(1) infinite;
+  }
+  @keyframes emb-blink { 50% { opacity: 0.3; } }
+  @media (pointer: coarse) { #minimap-hint { display: none; } }
+</style>
+
+<div id="title-card">
+  <h1>AMPLITUDE SPEED RUN</h1>
+  <div class="prompt">→ / ← WALK &nbsp;·&nbsp; DOUBLE-TAP → RUN &nbsp;·&nbsp; ↑ JUMP<br>↑↑ DOUBLE JUMP &nbsp;·&nbsp; ↓ DUCK &nbsp;·&nbsp; E = 🍪 DATA NOM</div>
+  <div class="play-hint">CLICK OR PRESS KEYS TO PLAY</div>
+</div>
+
+<div id="touch-controls">
+  <div class="pad">
+    <button id="btn-left">◀</button>
+    <button id="btn-right">▶</button>
+  </div>
+  <div class="pad">
+    <button id="btn-down">▼</button>
+    <button id="btn-jump">▲</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SPRITES — sliced from the Data Monster sheet by
+   tools/slice_sprites.py. Horizontal strips, facing right.
+   ============================================================ */
+const SPRITES = {
+  idle: { src: "../assets/datamonster-idle.png", frames: 3, frameWidth: 125, frameHeight: 167, fps: 2.5 },
+  walk: { src: "../assets/datamonster-walk.png", frames: 4, frameWidth: 131, frameHeight: 159, fps: 8 },
+  run:  { src: "../assets/datamonster-run.png",  frames: 10, frameWidth: 199, frameHeight: 292, fps: 16 },
+  fly:  { src: "../assets/datamonster-fly.png",  frames: 4, frameWidth: 224, frameHeight: 152, fps: 10 },
+  eat:  { src: "../assets/datamonster-eat.png",  frames: 10, frameWidth: 191, frameHeight: 237, fps: 9 },
+};
+
+/* ============================================================
+   TUNING
+   ============================================================ */
+const ZONE_LEN = 3600;
+const WORLD_LENGTH = ZONE_LEN * 5;        // 18000
+const WALK_SPEED = 560;
+const RUN_SPEED = 1320;
+const DOUBLE_TAP_MS = 260;                // window for double-tap → run
+const JUMP_VELOCITY = 980;
+const GRAVITY = 2700;
+const PLAYER_H = 150;                     // on-screen monster height
+const GROUND_FRAC = 0.82;
+
+const ZONES = [
+  { name: "LEVEL 1 · IDEA",       skyTop: "#141024", skyBot: "#0a0820" },
+  { name: "LEVEL 2 · CODE",       skyTop: "#0d1f38", skyBot: "#000922" },
+  { name: "LEVEL 3 · VALIDATION", skyTop: "#183028", skyBot: "#071521" },
+  { name: "LEVEL 4 · REVIEW",     skyTop: "#12241f", skyBot: "#030b17" },
+  { name: "LEVEL 5 · PRODUCTION", skyTop: "#145eaf", skyBot: "#41a6db" },
+];
+
+/* Painted level plates (art by Joshua's generator, sliced by tools/slice_*.py).
+   bg = everything above the walkable grass line, drawn as a parallax backdrop.
+   ground = repeating wall strip drawn at parallax 1 under the player's feet.
+   fill = color continuing the wall below the strip on tall windows. */
+const PLATES = {
+  0: { bg: loadImg("../assets/idea-bg.png"),       ground: loadImg("../assets/idea-ground.png"),       fill: "#000820" },
+  1: { bg: loadImg("../assets/code-bg.png"),       ground: loadImg("../assets/code-ground.png"),       fill: "#000922" },
+  2: { bg: loadImg("../assets/validation-bg.png"), ground: loadImg("../assets/validation-ground.png"), fill: "#071521" },
+  3: { bg: loadImg("../assets/review-bg.png"),     ground: loadImg("../assets/review-ground.png"),     fill: "#030b17" },
+  4: { bg: loadImg("../assets/production-bg.png"), ground: loadImg("../assets/production-ground.png"), fill: "#141b28" },
+};
+function loadImg(src) { const i = new Image(); i.src = src; return i; }
+function plateReady(p) { return p && p.bg.complete && p.bg.naturalWidth > 0 && p.ground.complete && p.ground.naturalWidth > 0; }
+
+/* SPEED BOOST gate straddling each zone boundary. Drawn in two halves so the
+   monster passes IN FRONT of the near (left) half and BEHIND the far (right)
+   post — the illusion of running through the gate. split = the x-fraction of
+   the source image where "behind the monster" begins (just left of the right
+   post); openCx = where the archway opening is centered. */
+const gateImg = loadImg("../assets/speed-boost-gate.png");
+const GATE = { W: 1187, H: 777, screenH: 330, openCx: 0.455, split: 0.64, sink: 6 };
+function gateReady() { return gateImg.complete && gateImg.naturalWidth > 0; }
+
+/* ============================================================
+   LEVEL CONTENT — two editorial cards per zone
+   ============================================================ */
+const LEVEL_CONTENT = [
+  { x: 700,   kicker: "Level 1 · The Office", title: "EPD meets AI",
+    body: "Amplitude's Engineering, Product & Design org set out on a quest: weave AI into how we build — not as a gimmick, but as a daily power-up." },
+  { x: 2100,  kicker: "Power-Up · Code", title: "More PRs, less grind", stat: "🍄 +XX%",
+    body: "AI-assisted coding is helping engineers ship more pull requests, with reviews and boilerplate handled in a fraction of the time." },
+  { x: 4500,  kicker: "Level 2 · Lombard Street", title: "From idea to spec, faster", stat: "⭐ XX hrs saved",
+    body: "The crookedest street in the world has nothing on a product spec. PMs draft, synthesize research, and pressure-test ideas with AI." },
+  { x: 6100,  kicker: "Power-Up · Product", title: "Fewer switchbacks to ship",
+    body: "Less time navigating hairpin turns between docs and meetings — more time with customers." },
+  { x: 8300,  kicker: "Level 3 · Golden Gate", title: "Prototypes at warp speed", stat: "🔥 X× faster",
+    body: "Designers bridge concept to clickable prototype in hours, not weeks, freeing time for the craft that actually matters." },
+  { x: 9800,  kicker: "Power-Up · Design", title: "Spanning the gap",
+    body: "Design and engineering meet in the middle — AI-generated prototypes become production code without the handoff toll booth." },
+  { x: 11800, kicker: "Level 4 · Painted Ladies", title: "AI is a team sport",
+    body: "Skills, agents, and shared workflows spread across the org — every win one Ampliteer ships becomes a power-up for everyone else." },
+  { x: 13300, kicker: "Power-Up · Culture", title: "Compounding wins",
+    body: "Every workflow shared, every skill published, every agent shipped makes the next team faster. The wins stack like coins." },
+  { x: 15000, kicker: "Level 5 · AI Engineering Deck", title: "Agents on the night shift",
+    body: "Planner, coder, reviewer, tester, deployer — all ONLINE. Orchestrated agents keep the pipeline moving while the city sleeps." },
+  { x: 16100, kicker: "Power-Up · Stack", title: "Claude + Cursor, wired in",
+    body: "The deck runs on Claude and Cursor: prompt routing, an MCP network, and a deployment pipeline that goes build → test → review → deploy." },
+  { x: 17100, kicker: "Level Complete", title: "🏁 This is just World 1",
+    body: "The Data Monster keeps running. More levels — more stories, more stats, more wins — coming soon." },
+];
+
+/* ============================================================
+   SPRITE LOADING (procedural placeholder fallback kept)
+   ============================================================ */
+function makePlaceholderSheet(frames) {
+  const F = 32;
+  const c = document.createElement("canvas");
+  c.width = F * frames; c.height = F;
+  const x = c.getContext("2d");
+  for (let f = 0; f < frames; f++) {
+    x.fillStyle = "#2f6bff";
+    x.fillRect(f * F + 6, 8, 20, 18);
+  }
+  return c;
+}
+function loadAnim(cfg) {
+  const anim = { frames: cfg.frames, fps: cfg.fps, fw: cfg.frameWidth, fh: cfg.frameHeight, img: null, ready: false };
+  const img = new Image();
+  img.src = cfg.src;
+  img.onload = () => { anim.img = img; anim.ready = true; };
+  img.onerror = () => {
+    anim.fw = 32; anim.fh = 32;
+    anim.img = makePlaceholderSheet(anim.frames);
+    anim.ready = true;
+  };
+  return anim;
+}
+const anims = {
+  idle: loadAnim(SPRITES.idle),
+  walk: loadAnim(SPRITES.walk),
+  run:  loadAnim(SPRITES.run),
+  fly:  loadAnim(SPRITES.fly),
+  eat:  loadAnim(SPRITES.eat),
+};
+
+/* ============================================================
+   SETUP
+   ============================================================ */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const worldEl = document.getElementById("world");
+const titleCard = document.getElementById("title-card");
+const hudProgress = document.getElementById("hud-progress");
+const hudZone = document.getElementById("hud-zone");
+
+let W = 0, H = 0, groundY = 0;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  groundY = Math.round(H * GROUND_FRAC);
+  ctx.imageSmoothingEnabled = false;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// Content cards
+const cards = LEVEL_CONTENT.map(item => {
+  const el = document.createElement("div");
+  el.className = "content-card";
+  el.style.left = item.x + "px";
+  el.innerHTML =
+    `<div class="kicker">${item.kicker}</div>` +
+    `<h2>${item.title}</h2>` +
+    (item.stat ? `<div class="stat">${item.stat}</div>` : "") +
+    `<p>${item.body}</p>`;
+  worldEl.appendChild(el);
+  return { el, x: item.x, shown: false };
+});
+function layoutCards() {
+  cards.forEach(c => { c.el.style.top = Math.max(40, groundY - 440) + "px"; });
+}
+layoutCards();
+window.addEventListener("resize", layoutCards);
+
+/* The card whose section the player is in sticks to the LEFT of the screen
+   (CARD_MARGIN from the edge), out of the Data Monster's path so it never
+   hides him — including mid-jump. Its travel is still clamped so it parks
+   at its own zone's boundary — or just short of where the next card appears —
+   instead of riding along into the new section. */
+const CARD_W = 380;
+const CARD_MARGIN = 90;
+const CARD_GAP = 20;
+function updateCards(camX) {
+  if (!started) return; // no card until the first step — keeps the title screen clean
+  let active = -1;
+  for (let i = 0; i < cards.length; i++) {
+    if (player.x >= cards[i].x - W * 0.45) active = i;
+  }
+  if (active < 0) return;
+  const c = cards[active];
+  if (!c.shown) { c.shown = true; c.el.classList.add("visible"); }
+  const nextX = active + 1 < cards.length ? cards[active + 1].x : Infinity;
+  // The next card activates when player.x = nextX - 0.45W, at which point the
+  // camera sits at camX = player.x - 0.4W = nextX - 0.85W, so the next card
+  // appears at world-left (nextX - 0.85W) + CARD_MARGIN. Park this card a full
+  // width + CARD_GAP to the left of that so the two never overlap on handoff.
+  const nextCardLeft = (nextX - 0.85 * W) + CARD_MARGIN;
+  const zoneEnd = (zoneIndexAt(c.x) + 1) * ZONE_LEN;
+  const parkAt = Math.min(nextCardLeft - CARD_W - CARD_GAP, zoneEnd - CARD_W - 48);
+  c.el.style.left = Math.round(Math.min(camX + CARD_MARGIN, parkAt)) + "px";
+}
+
+/* ============================================================
+   INPUT — double-tap to run, up to jump, down to duck
+   ============================================================ */
+const keys = { left: false, right: false, down: false };
+let runLatch = { left: false, right: false };
+let lastTap = { left: -1e9, right: -1e9 };
+let wantJump = false;
+let started = false;
+let runMult = 1;              // ×1.2 the first time the monster runs through each gate (capped)
+const RUN_MULT_MAX = 5;
+const boostedGates = new Set();   // gates already boosted — walking back through won't stack
+
+function pressDir(dir) {
+  const now = performance.now();
+  if (now - lastTap[dir] < DOUBLE_TAP_MS) runLatch[dir] = true;
+  lastTap[dir] = now;
+  keys[dir] = true;
+  if (!started) { started = true; titleCard.classList.add("hidden"); }
+}
+function releaseDir(dir) {
+  keys[dir] = false;
+  runLatch[dir] = false;
+}
+
+window.addEventListener("keydown", e => {
+  if (e.repeat) {
+    if (["ArrowRight","ArrowLeft","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
+    return;
+  }
+  if (e.key === "ArrowRight" || e.key === "d") { pressDir("right"); e.preventDefault(); }
+  if (e.key === "ArrowLeft"  || e.key === "a") { pressDir("left");  e.preventDefault(); }
+  if (e.key === "ArrowUp" || e.key === "w" || e.key === " ") { wantJump = true; e.preventDefault(); }
+  if (e.key === "ArrowDown" || e.key === "s") { keys.down = true; e.preventDefault(); }
+  if (e.key === "e" || e.key === "c") startEat();
+});
+window.addEventListener("keyup", e => {
+  if (e.key === "ArrowRight" || e.key === "d") releaseDir("right");
+  if (e.key === "ArrowLeft"  || e.key === "a") releaseDir("left");
+  if (e.key === "ArrowDown" || e.key === "s") keys.down = false;
+});
+
+// Touch controls (double-tap works here too via pressDir)
+function bindHold(id, onDown, onUp) {
+  const b = document.getElementById(id);
+  b.addEventListener("pointerdown", e => { onDown(); e.preventDefault(); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => b.addEventListener(ev, onUp));
+}
+bindHold("btn-left",  () => pressDir("left"),  () => releaseDir("left"));
+bindHold("btn-right", () => pressDir("right"), () => releaseDir("right"));
+bindHold("btn-jump",  () => { wantJump = true; }, () => {});
+bindHold("btn-down",  () => { keys.down = true; }, () => { keys.down = false; });
+
+/* ============================================================
+   TELEPORT — level-skip with a *poof* sparkle burst on both ends
+   ============================================================ */
+let teleport = null;          // { targetX, until }
+const sparks = [];
+
+function spawnPoof(worldX, feetY) {
+  const cy = feetY - PLAYER_H * 0.5;
+  const cols = ["#ffffff", "#ffd447", "#6d9bff", "#b7c6ff"];
+  for (let i = 0; i < 30; i++) {
+    const ang = (i / 30) * Math.PI * 2 + Math.random() * 0.4;
+    const speed = 90 + Math.random() * 260;
+    sparks.push({
+      x: worldX + (Math.random() - 0.5) * 40,
+      y: cy + (Math.random() - 0.5) * 90,
+      vx: Math.cos(ang) * speed,
+      vy: Math.sin(ang) * speed - 40,
+      life: 0.45 + Math.random() * 0.35,
+      maxLife: 0.8,
+      size: 3 + Math.random() * 7,
+      col: cols[i % cols.length],
+    });
+  }
+}
+
+function startTeleport(zi) {
+  if (teleport) return;
+  const targetX = zi === 0 ? 300 : zi * ZONE_LEN + 420;
+  if (Math.abs(targetX - player.x) < 10) return;
+  if (!started) { started = true; titleCard.classList.add("hidden"); }
+  spawnPoof(player.x, groundY);
+  teleport = { targetX, until: performance.now() + 380 };
+}
+
+function updateSparks(dt, camX) {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.life -= dt;
+    if (s.life <= 0) { sparks.splice(i, 1); continue; }
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.vx *= 0.92;
+    s.vy *= 0.92;
+    const sx = s.x - camX;
+    if (sx < -40 || sx > W + 40) continue;
+    const a = Math.max(0, s.life / s.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = s.col;
+    const r = s.size * (0.5 + a);
+    // diamond sparkle
+    ctx.beginPath();
+    ctx.moveTo(sx, s.y - r);
+    ctx.lineTo(sx + r * 0.6, s.y);
+    ctx.lineTo(sx, s.y + r);
+    ctx.lineTo(sx - r * 0.6, s.y);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+document.querySelectorAll("#level-nav button[data-zone]").forEach(b => {
+  b.addEventListener("click", () => startTeleport(+b.dataset.zone));
+});
+
+// Scroll-driven teleport: the parent article postMessages a target zone as
+// the reader scrolls into each step, so the monster speedruns level→level
+// in sync with the story. If one is already in flight, remember the latest
+// requested zone and apply it the moment the current teleport lands.
+let pendingZone = null;
+window.addEventListener("message", (e) => {
+  const d = e.data;
+  if (d && d.type === "goToZone" && typeof d.zone === "number") {
+    const z = Math.max(0, Math.min(ZONES.length - 1, d.zone));
+    if (teleport) pendingZone = z;
+    else startTeleport(z);
+  }
+});
+
+/* ============================================================
+   DATA NOM — cookie out from under the hat (E key or 🍪 button)
+   ============================================================ */
+let eating = 0;
+function startEat() {
+  if (teleport || eating > 0 || player.y > 0) return;
+  if (!started) { started = true; titleCard.classList.add("hidden"); }
+  eating = SPRITES.eat.frames / SPRITES.eat.fps + 0.5; // hold the last bite a beat
+  player.animTime = 0;
+}
+document.getElementById("btn-nom").addEventListener("click", startEat);
+
+/* ============================================================
+   LEVEL PROGRESS — nav button states + minimap strip
+   ============================================================ */
+let maxX = 300; // furthest point reached
+const navButtons = [...document.querySelectorAll("#level-nav button[data-zone]")];
+const minimap = document.getElementById("minimap");
+const mctx = minimap.getContext("2d");
+const MM_W = 300, MM_H = 34;
+const MM_COLORS = ["#6a7194", "#4d9e57", "#c94430", "#d9a0b8", "#3336a8"];
+
+minimap.addEventListener("click", e => {
+  const rect = minimap.getBoundingClientRect();
+  const frac = (e.clientX - rect.left) / rect.width;
+  startTeleport(Math.max(0, Math.min(ZONES.length - 1, Math.floor(frac * ZONES.length))));
+});
+
+function drawMinimap() {
+  mctx.setTransform(2, 0, 0, 2, 0, 0);
+  mctx.clearRect(0, 0, MM_W, MM_H);
+  const x0 = 2, y0 = 10, w = MM_W - 4, h = 15;
+
+  mctx.save();
+  mctx.beginPath();
+  mctx.roundRect(x0, y0, w, h, 6);
+  mctx.clip();
+  // one themed segment per level
+  for (let i = 0; i < ZONES.length; i++) {
+    mctx.fillStyle = MM_COLORS[i];
+    mctx.fillRect(x0 + (i / ZONES.length) * w, y0, w / ZONES.length + 1, h);
+  }
+  // where you've been (bright) vs not yet (dim)
+  const fracMax = Math.min(1, maxX / WORLD_LENGTH);
+  mctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+  mctx.fillRect(x0, y0, w * fracMax, h);
+  mctx.fillStyle = "rgba(5, 3, 20, 0.45)";
+  mctx.fillRect(x0 + w * fracMax, y0, w * (1 - fracMax), h);
+  // boundaries + level numbers
+  mctx.fillStyle = "rgba(11, 5, 36, 0.6)";
+  for (let i = 1; i < ZONES.length; i++) mctx.fillRect(x0 + (i / ZONES.length) * w - 1, y0, 2, h);
+  mctx.font = "600 9px 'Geist Mono', monospace";
+  mctx.textAlign = "center";
+  mctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+  for (let i = 0; i < ZONES.length; i++) {
+    mctx.fillText(String(i + 1), x0 + ((i + 0.5) / ZONES.length) * w, y0 + h - 4);
+  }
+  mctx.restore();
+
+  // strip border
+  mctx.strokeStyle = "rgba(238, 240, 255, 0.85)";
+  mctx.lineWidth = 1.5;
+  mctx.beginPath();
+  mctx.roundRect(x0, y0, w, h, 6);
+  mctx.stroke();
+  // finish flag
+  mctx.font = "10px sans-serif";
+  mctx.fillText("🏁", x0 + w - 6, y0 - 3);
+  // you are here
+  const px = x0 + Math.min(1, player.x / WORLD_LENGTH) * w;
+  mctx.beginPath();
+  mctx.arc(px, y0 + h / 2, 5, 0, Math.PI * 2);
+  mctx.fillStyle = "#ffffff";
+  mctx.fill();
+  mctx.strokeStyle = "#0b0524";
+  mctx.lineWidth = 2;
+  mctx.stroke();
+  mctx.textAlign = "left";
+}
+
+function updateLevelUI() {
+  const cur = zoneIndexAt(player.x);
+  navButtons.forEach((b, i) => {
+    b.classList.toggle("current", i === cur);
+    b.classList.toggle("visited", i !== cur && maxX >= i * ZONE_LEN + 400);
+  });
+  drawMinimap();
+}
+
+function drawNomBubble(cx, topY) {
+  const text = "data nom nom";
+  ctx.font = "600 14px Inter, sans-serif";
+  const tw = ctx.measureText(text).width;
+  const bw = tw + 26, bh = 32;
+  const bx = cx - bw / 2, by = topY - bh - 18;
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#1e61f0";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 9);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx - 7, by + bh);
+  ctx.lineTo(cx + 9, by + bh);
+  ctx.lineTo(cx + 2, by + bh + 11);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#141838";
+  ctx.textAlign = "center";
+  ctx.fillText(text, cx, by + 21);
+  ctx.textAlign = "left";
+}
+
+/* ============================================================
+   PLAYER
+   ============================================================ */
+const player = {
+  x: 300,
+  y: 0,          // height above ground (positive = in the air)
+  vy: 0,
+  facing: 1,
+  state: "idle", // idle | walk | run | jump | duck | eat
+  animTime: 0,
+};
+let jumps = 0;   // jumps used since last grounded (max 2 = double jump)
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function rand(seed) { const s = Math.sin(seed * 127.1) * 43758.5453; return s - Math.floor(s); }
+function hexLerp(a, b, t) {
+  const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
+  return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(",")})`;
+}
+function zoneIndexAt(x) { return Math.max(0, Math.min(ZONES.length - 1, Math.floor(x / ZONE_LEN))); }
+// Blended zone palette near boundaries (600px blend band)
+function skyAt(x) {
+  const zi = zoneIndexAt(x);
+  const posInZone = x - zi * ZONE_LEN;
+  const BAND = 600;
+  if (zi < ZONES.length - 1 && posInZone > ZONE_LEN - BAND) {
+    const t = (posInZone - (ZONE_LEN - BAND)) / BAND;
+    return {
+      top: hexLerp(ZONES[zi].skyTop, ZONES[zi + 1].skyTop, t),
+      bot: hexLerp(ZONES[zi].skyBot, ZONES[zi + 1].skyBot, t),
+    };
+  }
+  return { top: ZONES[zi].skyTop, bot: ZONES[zi].skyBot };
+}
+function px(x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+// Parallax element anchored to its zone: appears at screen x = rel when the
+// camera sits at the zone's left edge, then scrolls at speed p. Keep rel
+// under ~ZONE_LEN * p so elements finish exiting before the zone ends.
+function parX(base, rel, p, camX) { return rel - (camX - base) * p; }
+// Alpha for far background bands: fade in/out at zone boundaries based on
+// how much of the viewport the zone covers.
+function zoneAlpha(base, camX) {
+  const ov = Math.min(camX + W, base + ZONE_LEN) - Math.max(camX, base);
+  return Math.max(0, Math.min(1, (ov / W) * 1.6));
+}
+// Repeating far-background band scrolling at parallax p; draws tile(sx) for
+// every tile of width period covering the viewport.
+function tiled(p, period, camX, tile) {
+  let sx = ((-camX * p) % period + period) % period;
+  for (sx -= period; sx < W + period; sx += period) tile(sx);
+}
+
+/* ============================================================
+   SCENERY — ZONE 1: THE OFFICE (0 .. 3600)
+   ============================================================ */
+function drawOffice(camX) {
+  const x0 = 0, x1 = ZONE_LEN;
+  // windows showing daytime skyline
+  for (let wx = 260; wx < x1 - 400; wx += 950) {
+    const sx = wx - camX;
+    if (sx < -600 || sx > W + 100) continue;
+    const wTop = groundY - 520, wH = 330, wW = 480;
+    px(sx - 14, wTop - 14, wW + 28, wH + 28, "#2c3352");       // frame
+    px(sx, wTop, wW, wH, "#7ec8f5");                            // sky
+    // city silhouette
+    ctx.fillStyle = "#5b9ec7";
+    for (let b = 0; b < 7; b++) {
+      const bw = 40 + rand(wx + b) * 50, bh = 60 + rand(wx + b * 7) * 130;
+      ctx.fillRect(sx + 20 + b * 64, wTop + wH - bh, bw, bh);
+    }
+    // clouds in window
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillRect(sx + 60 + rand(wx) * 200, wTop + 40, 90, 16);
+    ctx.fillRect(sx + 80 + rand(wx) * 200, wTop + 30, 50, 12);
+    // mullions
+    px(sx + wW / 2 - 5, wTop, 10, wH, "#2c3352");
+    px(sx, wTop + wH / 2 - 5, wW, 10, "#2c3352");
+  }
+
+  // whiteboard
+  for (const wx of [1750]) {
+    const sx = wx - camX;
+    if (sx > -400 && sx < W + 100) {
+      px(sx, groundY - 470, 330, 200, "#e8ecf2");
+      px(sx - 8, groundY - 478, 346, 8, "#9aa4b8");
+      px(sx - 8, groundY - 270, 346, 8, "#9aa4b8");
+      ctx.fillStyle = "#2a56c9";
+      ctx.font = "bold 22px 'Courier New', monospace";
+      ctx.fillText("PLAN → ITERATE", sx + 24, groundY - 420);
+      ctx.fillText("→ SHIP 🚀", sx + 24, groundY - 388);
+      px(sx + 24, groundY - 370, 120, 6, "#d84f7a");
+      px(sx + 24, groundY - 350, 160, 6, "#3fae5c");
+      px(sx + 250, groundY - 360, 40, 40, "#f2c94c"); // sticky note
+    }
+  }
+
+  // desks with monitors
+  for (const dx of [650, 2450, 3050]) {
+    const sx = dx - camX;
+    if (sx < -350 || sx > W + 100) continue;
+    px(sx, groundY - 130, 300, 16, "#c97a2e");            // desktop
+    px(sx + 16, groundY - 114, 18, 114, "#8a5420");       // legs
+    px(sx + 266, groundY - 114, 18, 114, "#8a5420");
+    px(sx + 70, groundY - 260, 160, 110, "#20242f");      // monitor
+    px(sx + 80, groundY - 250, 140, 90, "#101622");       // screen
+    ctx.fillStyle = "#4cd964"; ctx.fillRect(sx + 90, groundY - 238, 70, 6);
+    ctx.fillStyle = "#e8734a"; ctx.fillRect(sx + 90, groundY - 224, 100, 6);
+    ctx.fillStyle = "#5aa0f2"; ctx.fillRect(sx + 90, groundY - 210, 50, 6);
+    ctx.fillStyle = "#c8cede"; ctx.fillRect(sx + 90, groundY - 196, 88, 6);
+    px(sx + 140, groundY - 150, 20, 20, "#20242f");       // stand
+  }
+
+  // server racks with blinking LEDs
+  for (const rx of [1300, 2900]) {
+    const sx = rx - camX;
+    if (sx < -220 || sx > W + 100) continue;
+    px(sx, groundY - 340, 180, 340, "#1a1e2a");
+    px(sx + 10, groundY - 330, 160, 320, "#252b3c");
+    for (let row = 0; row < 5; row++) {
+      const ry = groundY - 310 + row * 62;
+      px(sx + 20, ry, 140, 44, "#141822");
+      for (let d = 0; d < 4; d++) {
+        const blink = Math.sin(performance.now() * 0.004 + rx + row * 3 + d * 7) > 0;
+        px(sx + 30 + d * 16, ry + 10, 8, 8, blink ? "#4cd964" : "#173d1f");
+      }
+      px(sx + 100, ry + 10, 50, 22, "#0e1118");
+    }
+  }
+
+  // plants
+  for (const gx of [430, 1660, 2250, 3350]) {
+    const sx = gx - camX;
+    if (sx < -100 || sx > W + 100) continue;
+    px(sx, groundY - 60, 56, 60, "#b8562e");
+    ctx.fillStyle = "#3fae5c";
+    ctx.beginPath(); ctx.ellipse(sx + 28, groundY - 85, 38, 34, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2e8547";
+    ctx.beginPath(); ctx.ellipse(sx + 12, groundY - 70, 18, 16, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // EXIT sign near zone end
+  const ex = 3480 - camX;
+  if (ex > -160 && ex < W + 100) {
+    px(ex, groundY - 500, 130, 56, "#1f7a3d");
+    ctx.fillStyle = "#dff5e4";
+    ctx.font = "bold 26px 'Courier New', monospace";
+    ctx.fillText("EXIT→", ex + 18, groundY - 462);
+  }
+}
+
+/* ============================================================
+   ZONE 2: LOMBARD STREET (3600 .. 7200)
+   ============================================================ */
+/* Painted plate backdrop: scaled so the plate's grass line sits exactly at
+   groundY, given a parallax speed that makes it traverse the viewport over
+   the length of the zone. Mirrored copies on both sides cover the zone
+   transition bands so the plate never shows a hard edge. */
+function drawPlateZone(base, plate, camX) {
+  if (!plateReady(plate)) return;
+  const iw = plate.bg.naturalWidth, ih = plate.bg.naturalHeight;
+  const s = groundY / ih;
+  const PW = iw * s;
+  const p = Math.max(0.15, Math.min(0.9, (PW - W) / ZONE_LEN));
+  const x0 = parX(base, 0, p, camX);
+  for (let k = -1; k <= 1; k++) {
+    const mx = x0 + k * PW;
+    if (mx > W || mx + PW < 0) continue;
+    if (k === 0) {
+      ctx.drawImage(plate.bg, mx, 0, PW, groundY);
+    } else {
+      ctx.save();
+      ctx.translate(mx + PW / 2, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(plate.bg, -PW / 2, 0, PW, groundY);
+      ctx.restore();
+    }
+  }
+}
+
+/* ============================================================
+   ZONE 3: GOLDEN GATE (7200 .. 10800)
+   ============================================================ */
+function drawGoldenGate(camX, time) {
+  const base = ZONE_LEN * 2;
+  const p = 0.7;
+  const fade = zoneAlpha(base, camX);
+
+  // water
+  const wy = groundY - 170;
+  ctx.globalAlpha = fade;
+  ctx.fillStyle = "#3a7fc2";
+  ctx.fillRect(0, wy, W, 170);
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  tiled(0.4, 340, camX, sx => {
+    ctx.fillRect(sx, wy + 24, 60, 4);
+    ctx.fillRect(sx + 160, wy + 70, 60, 4);
+    ctx.fillRect(sx + 80, wy + 116, 60, 4);
+  });
+  // sailboats
+  for (const bxo of [300, 1200, 2100]) {
+    const sx = parX(base, bxo, 0.45, camX);
+    if (sx < -80 || sx > W + 80) continue;
+    const by = wy + 40 + Math.sin(time * 0.001 + bxo) * 4;
+    px(sx, by, 54, 14, "#e8e2d0");
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.moveTo(sx + 26, by - 4); ctx.lineTo(sx + 26, by - 44); ctx.lineTo(sx + 48, by - 4); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // bridge: deck + two towers + cables (single parallax group, zone-anchored)
+  ctx.globalAlpha = fade;
+  const deckY = groundY - 300;
+  const t1 = parX(base, 500, p, camX), t2 = parX(base, 2100, p, camX);
+  const INTL = "#c94430", INTL2 = "#a83424";
+  // deck spans the whole zone band
+  const dx0 = parX(base, -1400, p, camX), dx1 = parX(base, 4000, p, camX);
+  if (dx1 > 0 && dx0 < W) {
+    px(Math.max(-50, dx0), deckY, Math.min(W + 100, dx1) - Math.max(-50, dx0), 26, INTL);
+    px(Math.max(-50, dx0), deckY + 26, Math.min(W + 100, dx1) - Math.max(-50, dx0), 8, INTL2);
+  }
+  for (const tx of [t1, t2]) {
+    if (tx < -300 || tx > W + 300) continue;
+    // tower legs + cross braces, art-deco steps
+    px(tx, deckY - 380, 26, 380 + 120, INTL);
+    px(tx + 94, deckY - 380, 26, 380 + 120, INTL);
+    px(tx - 8, deckY - 380, 136, 20, INTL2);
+    px(tx - 4, deckY - 250, 128, 18, INTL2);
+    px(tx, deckY - 120, 120, 16, INTL2);
+  }
+  // suspension cables
+  ctx.strokeStyle = INTL;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(t1 + 60, deckY - 370);
+  ctx.quadraticCurveTo((t1 + t2) / 2 + 60, deckY + 30, t2 + 60, deckY - 370);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(t1 + 60, deckY - 370);
+  ctx.quadraticCurveTo(t1 - 800, deckY + 60, t1 - 1700, deckY - 200);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(t2 + 60, deckY - 370);
+  ctx.quadraticCurveTo(t2 + 800, deckY + 60, t2 + 1700, deckY - 200);
+  ctx.stroke();
+  // hangers
+  ctx.lineWidth = 2;
+  for (let hx = t1 + 60; hx < t2 + 60; hx += 90) {
+    const t = (hx - (t1 + 60)) / (t2 - t1);
+    const cy = (1 - t) * (1 - t) * (deckY - 370) + 2 * (1 - t) * t * (deckY + 30) + t * t * (deckY - 370);
+    ctx.beginPath(); ctx.moveTo(hx, cy); ctx.lineTo(hx, deckY); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ============================================================
+   ZONE 4: PAINTED LADIES (10800 .. 14400)
+   ============================================================ */
+function drawPaintedLadies(camX) {
+  const base = ZONE_LEN * 3;
+  // downtown skyline behind: repeating band with the pyramid tower
+  ctx.globalAlpha = zoneAlpha(base, camX);
+  tiled(0.3, 2100, camX, sx => {
+    ctx.fillStyle = "rgba(130, 160, 195, 0.5)";
+    for (let b = 0; b < 6; b++) {
+      const bh = 100 + rand(b + 80) * 200;
+      ctx.fillRect(sx + b * 310, groundY - 220 - bh, 80 + rand(b + 3) * 50, bh + 220);
+    }
+    ctx.fillStyle = "rgba(130, 160, 195, 0.6)";
+    ctx.beginPath();
+    ctx.moveTo(sx + 1900, groundY - 220);
+    ctx.lineTo(sx + 1940, groundY - 620);
+    ctx.lineTo(sx + 1980, groundY - 220);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // the ladies (zone-anchored parallax row)
+  const houseCols = [["#9db8d9", "#6b88ad"], ["#a8d0a0", "#7aa872"], ["#e8d9a8", "#c0b078"], ["#e0a8b8", "#b87890"], ["#c0a8e0", "#9078b8"], ["#a8d8d0", "#78b0a8"]];
+  const p = 0.85;
+  for (let i = 0; i < 7; i++) {
+    const hx = parX(base, 150 + i * 360, p, camX);
+    if (hx < -400 || hx > W + 200) continue;
+    const [body, trim] = houseCols[i % houseCols.length];
+    const hh = 300;
+    px(hx, groundY - hh - 60, 320, hh, body);
+    // gable
+    ctx.fillStyle = trim;
+    ctx.beginPath(); ctx.moveTo(hx - 12, groundY - hh - 60); ctx.lineTo(hx + 160, groundY - hh - 150); ctx.lineTo(hx + 332, groundY - hh - 60); ctx.fill();
+    px(hx - 12, groundY - hh - 66, 344, 12, trim);
+    // gable window
+    px(hx + 140, groundY - hh - 96, 40, 40, "#3a4a6a");
+    // bay windows
+    for (let flr = 0; flr < 2; flr++) {
+      const fy = groundY - hh + 30 + flr * 130;
+      px(hx + 30, fy, 70, 90, trim);
+      px(hx + 40, fy + 10, 50, 70, "#3a4a6a");
+      px(hx + 220, fy, 70, 90, trim);
+      px(hx + 230, fy + 10, 50, 70, "#3a4a6a");
+    }
+    // door + stairs
+    px(hx + 135, groundY - 130, 56, 70, trim);
+    px(hx + 143, groundY - 122, 40, 62, "#2e3850");
+    px(hx + 120, groundY - 66, 86, 8, trim);
+    px(hx + 128, groundY - 58, 70, 8, trim);
+  }
+
+  // park foreground: trees + bench + lamp
+  for (const txo of [150, 1450, 2900]) {
+    const sx = base + txo - camX;
+    if (sx < -160 || sx > W + 160) continue;
+    px(sx + 26, groundY - 130, 22, 130, "#6a4a2e");
+    ctx.fillStyle = "#3f9e4d";
+    ctx.beginPath(); ctx.ellipse(sx + 37, groundY - 175, 75, 62, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2e8547";
+    ctx.beginPath(); ctx.ellipse(sx + 5, groundY - 145, 40, 32, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  const bx = base + 2100 - camX;
+  if (bx > -200 && bx < W + 100) {
+    px(bx, groundY - 90, 170, 12, "#8a5a33");
+    px(bx, groundY - 60, 170, 12, "#8a5a33");
+    px(bx + 10, groundY - 48, 12, 48, "#4a4a4a");
+    px(bx + 148, groundY - 48, 12, 48, "#4a4a4a");
+  }
+}
+
+/* ============================================================
+   SHARED SCENERY
+   ============================================================ */
+const clouds = Array.from({ length: 30 }, (_, i) => ({ x: ZONE_LEN + i * 480 + rand(i + 5) * 400, y: 40 + rand(i + 11) * 200, s: 0.7 + rand(i + 17) * 1.1 }));
+const flagX = WORLD_LENGTH - 450;
+
+function drawGroundSegment(sxStart, sxEnd, zi, camX) {
+  const plate = PLATES[zi];
+  if (plate && plateReady(plate)) {
+    // painted ground strip from the level plate, world-locked (parallax 1)
+    const s = groundY / plate.bg.naturalHeight;
+    const tw = plate.ground.naturalWidth * s, th = plate.ground.naturalHeight * s;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sxStart, groundY, sxEnd - sxStart, H - groundY);
+    ctx.clip();
+    px(sxStart, groundY, sxEnd - sxStart, H - groundY, plate.fill);
+    const k0 = Math.floor((camX + sxStart) / tw), k1 = Math.ceil((camX + sxEnd) / tw);
+    for (let k = k0; k <= k1; k++) {
+      ctx.drawImage(plate.ground, k * tw - camX, groundY, tw + 1, th);
+    }
+    ctx.restore();
+    return;
+  }
+  if (zi === 0) {
+    // office floor: dark tile + orange brick ledge
+    px(sxStart, groundY, sxEnd - sxStart, H - groundY, "#23263c");
+    px(sxStart, groundY, sxEnd - sxStart, 12, "#c97a2e");
+    px(sxStart, groundY + 12, sxEnd - sxStart, 4, "#8a5420");
+    ctx.strokeStyle = "rgba(120,130,160,0.25)";
+    for (let sx = sxStart - ((sxStart + camX) % 90); sx < sxEnd; sx += 90) {
+      ctx.strokeRect(sx, groundY + 16, 90, 60);
+    }
+  } else {
+    // grass + dirt
+    px(sxStart, groundY, sxEnd - sxStart, H - groundY, "#7a4a2c");
+    px(sxStart, groundY, sxEnd - sxStart, 14, "#46b04a");
+    px(sxStart, groundY + 14, sxEnd - sxStart, 6, "#2e7d32");
+    ctx.fillStyle = "rgba(60,34,18,0.5)";
+    for (let sx = sxStart - ((sxStart + camX) % 64); sx < sxEnd; sx += 64) {
+      for (let row = 0; row < 3; row++) {
+        const off = (row % 2) * 32;
+        ctx.fillRect(sx + off, groundY + 26 + row * 34, 26, 4);
+      }
+    }
+  }
+}
+
+function drawScene(camX, time) {
+  // sky (blended by camera position)
+  const sky = skyAt(camX + W / 2);
+  const g = ctx.createLinearGradient(0, 0, 0, groundY);
+  g.addColorStop(0, sky.top);
+  g.addColorStop(1, sky.bot);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, groundY);
+
+  // clouds (outdoor zones only)
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  for (const cl of clouds) {
+    const sx = cl.x - camX * 0.25;
+    if (sx < -200 || sx > W + 200) continue;
+    if (cl.x < ZONE_LEN - 200) continue;
+    const s = cl.s;
+    ctx.fillRect(sx, cl.y, 90 * s, 18 * s);
+    ctx.fillRect(sx + 18 * s, cl.y - 12 * s, 54 * s, 14 * s);
+  }
+
+  // zone scenery, each clipped to its own strip so scenes never bleed
+  // across a boundary (full painted plates make bleed very visible)
+  const zLeft = zoneIndexAt(camX), zRight = zoneIndexAt(camX + W);
+  for (let zi = zLeft; zi <= zRight; zi++) {
+    const sx0 = zi * ZONE_LEN - camX, sx1 = (zi + 1) * ZONE_LEN - camX;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sx0, 0, sx1 - sx0, H);
+    ctx.clip();
+    if (plateReady(PLATES[zi])) drawPlateZone(zi * ZONE_LEN, PLATES[zi], camX);
+    else if (zi === 0) drawOffice(camX);
+    else if (zi === 2) drawGoldenGate(camX, time);
+    else if (zi === 3) drawPaintedLadies(camX);
+    ctx.restore();
+  }
+
+  // ground, segmented per zone
+  for (let zi = zLeft; zi <= zRight; zi++) {
+    const sxStart = Math.max(0, zi * ZONE_LEN - camX);
+    const sxEnd = Math.min(W, (zi + 1) * ZONE_LEN - camX);
+    if (sxEnd > sxStart) drawGroundSegment(sxStart, sxEnd, zi, camX);
+  }
+
+  // pipeline gates at each zone boundary — back (near) halves, drawn behind the
+  // monster. The seam mask + right half are drawn in drawGatesFront() (over him).
+  drawGates(camX, "back");
+
+  // goal flag
+  drawGoalFlag(camX);
+}
+
+// Draw the SPEED BOOST gates at every zone boundary. part="back" draws a seam
+// mask + the left half (behind the monster); part="front" draws the right post
+// (over the monster) so he appears to pass through the gate.
+function drawGates(camX, part) {
+  if (!gateReady()) return;
+  const gh = GATE.screenH, s = gh / GATE.H, gw = GATE.W * s;
+  const top = groundY - gh + GATE.sink;
+  const sp = GATE.split;
+  for (let k = 1; k < ZONES.length; k++) {
+    const bx = k * ZONE_LEN - camX;                 // boundary (opening center) on screen
+    if (bx < -gw || bx > W + gw) continue;
+    const left = bx - GATE.openCx * gw;
+    if (part === "back") {
+      // seam mask: hide the hard plate cut behind the archway opening
+      const grad = ctx.createLinearGradient(bx - 55, 0, bx + 55, 0);
+      grad.addColorStop(0, "rgba(6,8,16,0)");
+      grad.addColorStop(0.5, "rgba(6,8,16,0.92)");
+      grad.addColorStop(1, "rgba(6,8,16,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(bx - 55, top + gh * 0.12, 110, H - (top + gh * 0.12));
+      // left half of the gate
+      ctx.drawImage(gateImg, 0, 0, GATE.W * sp, GATE.H, left, top, gw * sp, gh);
+    } else {
+      // right half (right post + chevron panel) — occludes the monster
+      ctx.drawImage(gateImg, GATE.W * sp, 0, GATE.W * (1 - sp), GATE.H, left + gw * sp, top, gw * (1 - sp), gh);
+    }
+  }
+}
+
+function drawGoalFlag(camX) {
+  const fx = flagX - camX;
+  if (fx > -100 && fx < W + 100) {
+    px(fx, groundY - 260, 8, 260, "#d8dcf0");
+    ctx.fillStyle = "#1e61f0";
+    ctx.beginPath();
+    ctx.moveTo(fx + 8, groundY - 260);
+    ctx.lineTo(fx + 84, groundY - 234);
+    ctx.lineTo(fx + 8, groundY - 208);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 20px 'Geist Mono', monospace";
+    ctx.fillText("A", fx + 26, groundY - 228);
+  }
+}
+
+/* ============================================================
+   PLAYER RENDER
+   ============================================================ */
+function drawPlayer(camX, time) {
+  let anim, squashY = 1, squashX = 1;
+  if (player.state === "jump") anim = anims.fly;
+  else if (player.state === "eat") anim = anims.eat;
+  else if (player.state === "duck") { anim = anims.idle; squashY = 0.62; squashX = 1.15; }
+  else if (player.state === "run") anim = anims.run;
+  else if (player.state === "walk") anim = anims.walk;
+  else anim = anims.idle;
+  if (!anim.ready) return;
+
+  let frame = Math.floor(player.animTime * anim.fps) % anim.frames;
+  if (player.state === "duck") frame = 2; // eyes-closed brace frame
+  else if (player.state === "eat") frame = Math.min(Math.floor(player.animTime * anim.fps), anim.frames - 1); // one-shot, hold last bite
+
+  const drawH = PLAYER_H * squashY;
+  const drawW = anim.fw * (PLAYER_H / anim.fh) * squashX;
+  const feetY = groundY + 6 - player.y;
+  const cx = player.x - camX;
+
+  // shadow (shrinks with height)
+  const shrink = Math.max(0.35, 1 - player.y / 420);
+  ctx.fillStyle = `rgba(0,0,0,${0.35 * shrink})`;
+  ctx.beginPath();
+  ctx.ellipse(cx, groundY + 8, drawW * 0.3 * shrink, 8 * shrink, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  if (player.facing === -1) {
+    ctx.translate(cx, 0);
+    ctx.scale(-1, 1);
+    ctx.translate(-cx, 0);
+  }
+  ctx.drawImage(anim.img, frame * anim.fw, 0, anim.fw, anim.fh,
+                cx - drawW / 2, feetY - drawH, drawW, drawH);
+  ctx.restore();
+
+  if (player.state === "eat" && player.animTime > 0.6) {
+    drawNomBubble(cx, feetY - drawH);
+  }
+}
+
+/* ============================================================
+   MAIN LOOP
+   ============================================================ */
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+
+  const grounded = player.y <= 0;
+  const ducking = grounded && keys.down;
+
+  // teleport: input is ignored mid-poof; arrive with a second burst
+  if (teleport) {
+    wantJump = false;
+    if (now >= teleport.until) {
+      player.x = teleport.targetX;
+      player.y = 0;
+      player.vy = 0;
+      spawnPoof(player.x, groundY);
+      teleport = null;
+      if (pendingZone !== null) { const z = pendingZone; pendingZone = null; startTeleport(z); }
+    }
+  }
+
+  // cookie time freezes movement until the last bite
+  if (eating > 0) {
+    eating = Math.max(0, eating - dt);
+    wantJump = false;
+  }
+
+  // horizontal
+  let dir = 0;
+  if (!teleport && eating === 0 && keys.right) dir += 1;
+  if (!teleport && eating === 0 && keys.left) dir -= 1;
+  const running = (dir === 1 && runLatch.right) || (dir === -1 && runLatch.left);
+  if (dir !== 0 && !ducking) {
+    player.facing = dir;
+    const prevX = player.x;
+    player.x += dir * (running ? RUN_SPEED * runMult : WALK_SPEED) * dt;
+    player.x = Math.max(120, Math.min(WORLD_LENGTH - 120, player.x));
+    // running through a gate: sparkle burst + 1.5× run speed
+    for (let k = 1; k < ZONES.length; k++) {
+      const gx = k * ZONE_LEN;
+      if ((prevX < gx && player.x >= gx) || (prevX > gx && player.x <= gx)) {
+        spawnPoof(gx, groundY);
+        if (running && !boostedGates.has(k)) {
+          runMult = Math.min(runMult * 1.2, RUN_MULT_MAX);
+          boostedGates.add(k);
+        }
+        break;
+      }
+    }
+  }
+
+  // vertical — one jump from the ground, one more mid-air (double jump)
+  if (wantJump && !ducking) {
+    if (grounded) {
+      player.vy = JUMP_VELOCITY;
+      jumps = 1;
+      if (!started) { started = true; titleCard.classList.add("hidden"); }
+    } else if (jumps === 1) {
+      player.vy = JUMP_VELOCITY * 0.92;
+      jumps = 2;
+    }
+  }
+  wantJump = false;
+  if (grounded && player.vy === 0) jumps = 0;
+  if (player.y > 0 || player.vy > 0) {
+    player.vy -= GRAVITY * dt;
+    player.y += player.vy * dt;
+    if (player.y <= 0) { player.y = 0; player.vy = 0; }
+  }
+
+  // state
+  const airborne = player.y > 0;
+  const prevState = player.state;
+  player.state = airborne ? "jump"
+               : eating > 0 ? "eat"
+               : ducking ? "duck"
+               : dir !== 0 ? (running ? "run" : "walk")
+               : "idle";
+  if (player.state !== prevState) player.animTime = 0;
+  player.animTime += dt;
+
+  // camera
+  const camX = Math.max(0, Math.min(player.x - W * 0.4, WORLD_LENGTH - W));
+  worldEl.style.transform = `translateX(${-camX}px)`;
+
+  updateCards(camX);
+
+  // HUD + level progress
+  maxX = Math.max(maxX, player.x);
+  hudProgress.textContent = Math.round((player.x / WORLD_LENGTH) * 100) + "%";
+  hudZone.textContent = ZONES[zoneIndexAt(player.x)].name;
+  updateLevelUI();
+
+  drawScene(camX, now);
+  if (!teleport) drawPlayer(camX, now);
+  drawGates(camX, "front");   // right posts occlude the monster → "through the gate"
+  updateSparks(dt, camX);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

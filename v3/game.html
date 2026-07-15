@@ -330,7 +330,7 @@ const SPRITES = {
    ============================================================ */
 const ZONE_LEN = 3600;
 const WORLD_LENGTH = ZONE_LEN * 5;        // 18000
-const WALK_SPEED = 300;
+const WALK_SPEED = 560;
 const RUN_SPEED = 1320;
 const DOUBLE_TAP_MS = 260;                // window for double-tap → run
 const JUMP_VELOCITY = 980;
@@ -600,6 +600,20 @@ function updateSparks(dt, camX) {
 
 document.querySelectorAll("#level-nav button[data-zone]").forEach(b => {
   b.addEventListener("click", () => startTeleport(+b.dataset.zone));
+});
+
+// Scroll-driven teleport: the parent article postMessages a target zone as
+// the reader scrolls into each step, so the monster speedruns level→level
+// in sync with the story. If one is already in flight, remember the latest
+// requested zone and apply it the moment the current teleport lands.
+let pendingZone = null;
+window.addEventListener("message", (e) => {
+  const d = e.data;
+  if (d && d.type === "goToZone" && typeof d.zone === "number") {
+    const z = Math.max(0, Math.min(ZONES.length - 1, d.zone));
+    if (teleport) pendingZone = z;
+    else startTeleport(z);
+  }
 });
 
 /* ============================================================
@@ -1136,10 +1150,11 @@ function drawScene(camX, time) {
     if (sxEnd > sxStart) drawGroundSegment(sxStart, sxEnd, zi, camX);
   }
 
-  // checkpoint pillars dress the hard seam at each zone boundary
+  // checkpoint pillars dress the hard seam at each zone boundary; each is a
+  // story gate (Validation · Review · Approval) so the game mirrors the article
   for (let k = 1; k < ZONES.length; k++) {
     const bx = k * ZONE_LEN - camX;
-    if (bx > -80 && bx < W + 80) drawBoundaryPillar(bx, time);
+    if (bx > -160 && bx < W + 160) drawBoundaryPillar(bx, time, k);
   }
 
   // goal flag
@@ -1148,7 +1163,8 @@ function drawScene(camX, time) {
 
 // Stone checkpoint pillar straddling a zone boundary, masking the scenery
 // seam from the skyline down through the ground band.
-function drawBoundaryPillar(bx, time) {
+const GATE_LABELS = ["VALIDATION", "REVIEW", "APPROVAL", "SHIP"];
+function drawBoundaryPillar(bx, time, k) {
   px(bx - 26, groundY - 310, 52, 310 + (H - groundY), "#8a6448");
   px(bx - 26, groundY - 310, 8, 310 + (H - groundY), "#a37a55");   // lit edge
   px(bx + 12, groundY - 310, 14, 310 + (H - groundY), "#6a4a30");  // shaded edge
@@ -1165,6 +1181,25 @@ function drawBoundaryPillar(bx, time) {
   ctx.lineTo(bx + 52, groundY - 386 + wave);
   ctx.lineTo(bx + 3, groundY - 372);
   ctx.fill();
+  // gate plaque — labels the pillar with its story gate
+  const lab = GATE_LABELS[k - 1];
+  if (lab) {
+    const ship = lab === "SHIP";
+    ctx.save();
+    ctx.font = "700 13px ui-monospace, 'SF Mono', Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const tw = ctx.measureText(lab).width;
+    const py = groundY - 292, pw = tw + 20, ph = 24;
+    ctx.fillStyle = "rgba(10,9,18,0.9)";
+    ctx.fillRect(bx - pw / 2, py, pw, ph);
+    ctx.strokeStyle = ship ? "#4fd39a" : "#ffd447";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx - pw / 2, py, pw, ph);
+    ctx.fillStyle = ship ? "#4fd39a" : "#ffd447";
+    ctx.fillText(lab, bx, py + ph / 2 + 1);
+    ctx.restore();
+  }
 }
 
 function drawGoalFlag(camX) {
@@ -1247,6 +1282,7 @@ function loop(now) {
       player.vy = 0;
       spawnPoof(player.x, groundY);
       teleport = null;
+      if (pendingZone !== null) { const z = pendingZone; pendingZone = null; startTeleport(z); }
     }
   }
 

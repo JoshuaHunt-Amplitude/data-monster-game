@@ -176,6 +176,7 @@
     font-variation-settings: "ELSH" 20;   /* Circle */
     font-weight: 400;
     letter-spacing: 0.01em;
+    color: var(--amp-light);
   }
 
   /* hover-definition tooltip on accent words */
@@ -196,8 +197,8 @@
   .tip:hover::after, .px[data-tip]:hover::after { opacity: 1; transform: translateY(0); }
 
   .editorial p { font-size: 19px; font-weight: 500; line-height: 1.5; letter-spacing: -0.02em; color: var(--ink-body); margin-bottom: 20px; }
-  .editorial p strong { color: var(--ink-head); font-weight: 600; }
-  .editorial em { color: var(--ink-head); font-style: italic; }
+  .editorial p strong { color: #eaf0f2; font-weight: 600; }
+  .editorial em { color: var(--amp-light); font-style: italic; }
 
   section.chapter { padding-top: 12vh; scroll-margin-top: 8vh; }
 
@@ -212,15 +213,19 @@
   .stat .was { color: #63677a; text-decoration: line-through; }
   .stat .delta { color: var(--amp-light); }
 
-  .block { margin: 28px 0; padding-left: 18px; border-left: 1px solid rgba(130,136,137,0.25); }
-  .block h3 { font-size: 16px; font-weight: 700; color: var(--ink-head); margin-bottom: 10px; }
+  /* receipts — 3× as the hero stat, the rest below */
+  .receipts-hero { text-align: center; padding: 38px 20px 32px; border: 1px solid rgba(255,212,71,0.3); border-radius: 14px; background: radial-gradient(120% 150% at 50% 0%, rgba(255,212,71,0.12), rgba(30,97,240,0.05) 55%, transparent 75%); margin: 30px 0 12px; }
+  .receipts-hero .big { font-size: clamp(66px, 9.5vw, 108px); font-weight: 800; color: var(--gold); line-height: 0.92; letter-spacing: -0.03em; }
+  .receipts-hero .lab { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-head); margin-top: 12px; }
+  .stats.receipts-grid { grid-template-columns: repeat(2, 1fr); margin: 12px 0 28px; }
 
-  .diagram { margin: 32px 0; border: 1px dashed rgba(109,155,255,0.4); border-radius: 12px; background: linear-gradient(180deg, rgba(30,97,240,0.06), rgba(30,97,240,0.02)); padding: 22px; }
+  .block { margin: 28px 0; padding-left: 18px; border-left: 2px solid rgba(30,97,240,0.45); }
+  .block h3 { font-size: 16px; font-weight: 700; color: var(--ink-head); margin-bottom: 10px; }
+  .block h3::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--gold); margin-right: 9px; vertical-align: middle; transform: translateY(-1px); }
+
+  .diagram { margin: 32px 0; border: 1px solid rgba(109,155,255,0.22); border-radius: 12px; background: linear-gradient(180deg, rgba(30,97,240,0.06), rgba(30,97,240,0.02)); padding: 22px; }
   .diagram .dlabel { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--amp-light); margin-bottom: 14px; }
-  .pipeline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .pnode { font-size: 12px; font-weight: 600; padding: 9px 13px; border-radius: 7px; background: #12121c; border: 1px solid rgba(130,136,137,0.25); color: var(--ink-head); white-space: nowrap; }
-  .pnode.gate { border-color: rgba(255,212,71,0.55); color: var(--gold); }
-  .parrow { color: #545776; }
+  .flowviz { display: block; width: 100%; height: 132px; }
   .plegend { font-size: 12px; color: var(--ink-body); margin-top: 14px; line-height: 1.6; }
 
   .stage {
@@ -311,7 +316,7 @@
         <p>Building software is untidy, but the path it goes through is less so. An idea becomes code, the code gets validated and reviewed, then it gets deployed to production. For us, that path slowed down at a few specific steps.</p>
         <div class="diagram" data-diagram="pipeline">
           <div class="dlabel">The pipeline · gates in gold</div>
-          <div class="pipeline" id="pipeline"></div>
+          <canvas class="flowviz" data-flow="constrained" aria-label="Data flowing through the delivery pipeline, bunching up at the manual gates"></canvas>
           <div class="plegend">Before our bet, every step was manual except staging deploys. Engineers pieced together unreproducible local environments that could take up to 30 minutes to spin up — on a bad day, most of their time went to setting up and shipping a single change.</div>
         </div>
         <p>Despite its flaws, this design worked for years because writing code was the slowest part of the system — a natural limit on how many changes could enter the pipeline at once. But agents changed that. Faster code generation turned a trickle of PRs into a flood, and the manual validating, reviewing, and approving became the stoppage points.</p>
@@ -343,8 +348,9 @@
         <p>Validation is where we confirm a change does what it's intended to do. In theory every change should go through it. In practice ours was slow and the first thing to go under tight deadlines — especially for new features, where it felt safer to ship without testing something no one was using yet. The result: features launched with unknown bugs customers found later, after the team had lost context and moved on.</p>
         <p><strong>The code we skip testing today becomes the legacy code of tomorrow.</strong> We had to make validation fast enough not to skip. Automated tests help, but they don't catch what you'd only notice by trying the change yourself — so we made that easy: ship a PR, get a working preview, no local setup.</p>
         <div class="diagram" data-diagram="gate-validation">
-          <div class="dlabel">Interactive · unlocking the Validation gate</div>
-          <div class="plegend">Micro-animation placeholder — the pipeline's Validation gate opens as previews come online. This gate is still a work in progress: a person can verify almost any change now, but agents can't yet validate backend changes well enough to merge on their own.</div>
+          <div class="dlabel">Unlocking the Validation gate</div>
+          <canvas class="flowviz" data-flow="open-validate" aria-label="The Validation gate opens and changes stop piling up behind it"></canvas>
+          <div class="plegend">Previews and ephemerals give every change a fast, trustworthy check, so the Validation gate opens and PRs stop piling up behind it. Still a work in progress: a person can verify almost any change now, but agents can't yet validate backend changes well enough to merge on their own.</div>
         </div>
         <div class="block"><h3>Frontend previews</h3><p>For a frontend change, the built assets go up to S3 and load as a working copy of the app — with dev tools to flip feature flags and settings, and a deep verification link straight to the page your change affects. Checking a change takes 2–5 minutes of click-through, no local setup needed.</p></div>
         <div class="block"><h3>Backend ephemerals</h3><p>Backend changes get the same treatment through ephemerals: a live, throwaway copy of the infrastructure spun up for the PR. You get a link to hit the APIs and see what actually works before anything merges.</p></div>
@@ -356,8 +362,9 @@
         <p>How did we get here? We'd adapted to a system that doesn't support meaningful review. Without strong automated validation signals from Gate 1, reviewers would have to manually verify behavioral correctness for every PR — unrealistic at any real throughput — so they skim and approve on trust and structure. An arbitrary gate that added time while catching a fraction of the bugs didn't make sense. So we removed it. Sort of. An automated reviewer now runs on every PR and auto-approves low-risk changes based on our risk model.</p>
         <div class="stats"><div class="stat"><div class="big">100 → 53 min</div><div class="lab">PR cycle time · p75, main repos · <span class="delta">~2× faster</span></div></div></div>
         <div class="diagram" data-diagram="gate-review">
-          <div class="dlabel">Interactive · unlocking the Review gate</div>
-          <div class="plegend">Micro-animation placeholder — low-risk PRs flow straight through as the Review gate opens.</div>
+          <div class="dlabel">Unlocking the Review gate</div>
+          <canvas class="flowviz" data-flow="open-review" aria-label="Low-risk changes flow straight through as the Review and Approval gates open"></canvas>
+          <div class="plegend">Automated review and risk-based auto-approval let low-risk PRs flow straight through — only the risky ones wait for a human.</div>
         </div>
         <div class="block"><h3>Automated code review</h3><p>We run Cursor's Bugbot on every PR in CI. It works out of the box, and we add context when it misses things. So far it catches bugs most humans used to let through — even though we've tripled the PRs we ship, bug reports have fallen by more than half and high-priority issues have dropped too. More code hasn't meant worse code, and Bugbot is a big reason why.</p>
         <div class="stats"><div class="stat"><div class="big">715 → 319</div><div class="lab">Bug reports / month · <span class="delta">↓ 55%</span></div></div></div></div>
@@ -377,8 +384,11 @@
 
       <section class="chapter" id="ch-receipts">
         <h2 class="title">The <span class="px" data-shape="circle">receipts</span></h2>
-        <div class="stats">
-          <div class="stat"><div class="big">3×</div><div class="lab">more PRs shipped</div></div>
+        <div class="receipts-hero">
+          <div class="big">3×</div>
+          <div class="lab">more PRs shipped</div>
+        </div>
+        <div class="stats receipts-grid">
           <div class="stat"><div class="big">30 → &lt;5 min</div><div class="lab">Frontend CI · <span class="delta">6× faster</span></div></div>
           <div class="stat"><div class="big">100 → 53 min</div><div class="lab">PR cycle time · p75 · <span class="delta">~2× faster</span></div></div>
           <div class="stat"><div class="big">715 → 319</div><div class="lab">Bug reports / month · <span class="delta">↓ 55%</span></div></div>
@@ -522,17 +532,198 @@ mbtn.addEventListener("click", () => {
 // The embedded game (game.html) is a v3-tailored copy: content cards removed,
 // simplified splash, minimap teleport hint — so no chrome injection needed here.
 
-// pipeline diagram
-const NODES = [
-  { t: "Idea", gate: true }, { t: "Code" }, { t: "Validation", gate: true }, { t: "Review", gate: true }, { t: "Production" },
+// ── Connect the story to the game ──────────────────────────────────────────
+// Each chapter maps to a game level; as a chapter scrolls to center, we tell
+// the game to teleport the monster there. One step of the story = one level.
+const CHAPTER_ZONE = {
+  "ch-intro": 0, "ch-why": 0, "ch-gates": 1, "ch-foundations": 1,
+  "ch-develop": 2, "ch-validation": 3, "ch-review": 3, "ch-culture": 4, "ch-receipts": 4,
+};
+const gameFrame = document.querySelector(".stage iframe");
+let currentZone = -1;
+function sendZone(z) {
+  if (z === currentZone || z == null) return;
+  currentZone = z;
+  if (gameFrame.contentWindow) {
+    gameFrame.contentWindow.postMessage({ type: "goToZone", zone: z }, "*");
+  }
+}
+const chapterObserver = new IntersectionObserver((entries) => {
+  // the chapter crossing the viewport centerline is the active step
+  entries.forEach((en) => {
+    if (en.isIntersecting) sendZone(CHAPTER_ZONE[en.target.id]);
+  });
+}, { rootMargin: "-45% 0px -45% 0px", threshold: 0 });
+document.querySelectorAll("section.chapter").forEach((c) => chapterObserver.observe(c));
+
+// ── Pipeline flow viz ───────────────────────────────────────────────────────
+// Data packets flow left→right through the delivery pipeline and bunch up at
+// the manual gates (Validate · Review · Approve). As the story unlocks each
+// gate, that gate turns green and packets stream straight through — the same
+// particle motif reused across all three diagrams.
+const FLOW_STAGES = [
+  { label: "Idea" }, { label: "Code" },
+  { label: "Validate", gate: true, key: "validate" },
+  { label: "Review",   gate: true, key: "review" },
+  { label: "Approve",  gate: true, key: "approve" },
+  { label: "Ship" },
 ];
-const wrap = document.getElementById("pipeline");
-NODES.forEach((n, i) => {
-  const el = document.createElement("span");
-  el.className = "pnode" + (n.gate ? " gate" : "");
-  el.textContent = (n.gate ? "🔒 " : "") + n.t;
-  wrap.appendChild(el);
-  if (i < NODES.length - 1) { const a = document.createElement("span"); a.className = "parrow"; a.textContent = "→"; wrap.appendChild(a); }
+const FLOW_OPEN = {
+  "constrained":   [],
+  "open-validate": ["validate"],
+  "open-review":   ["validate", "review", "approve"],
+};
+const C = {
+  blue: "#4f83ff", light: "#9db9ff", gold: "#ffd447", green: "#4fd39a",
+  ink: "#c2d0d2", dim: "#6b7285", track: "rgba(130,136,137,0.28)", node: "#12121c",
+};
+
+function makeFlow(canvas, openKeys) {
+  const ctx = canvas.getContext("2d");
+  const gates = FLOW_STAGES.map((s, i) => ({ ...s, i }))
+    .filter((s) => s.gate)
+    .map((g) => ({ ...g, open: openKeys.includes(g.key), last: 0, interval: 520 }));
+  let W = 0, H = 0, lineY = 0, nodeX = [], dpr = 1, particles = [];
+  let lastT = 0, spawnAcc = 0, running = false;
+
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    lineY = Math.round(H * 0.42);
+    const padL = 34, padR = 34;
+    nodeX = FLOW_STAGES.map((s, i) => padL + (W - padL - padR) * (i / (FLOW_STAGES.length - 1)));
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+
+  const gateX = (g) => nodeX[g.i];
+  const baseV = () => W / 3.4; // px per second → ~3.4s to cross when unobstructed
+
+  function tick(now) {
+    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
+    lastT = now;
+
+    spawnAcc += dt;
+    if (spawnAcc > 0.34 && particles.length < 90) {
+      spawnAcc = 0;
+      particles.push({ x: 16, seed: Math.random() * 6.283, lane: (Math.random() - 0.5) });
+    }
+
+    // resolve queueing at locked gates (front-most particle first)
+    particles.sort((a, b) => b.x - a.x);
+    for (const g of gates) g.queue = 0;
+    for (const p of particles) {
+      let blocked = false;
+      for (const g of gates) {
+        const gx = gateX(g);
+        if (p.x < gx - 1) {                 // nearest gate ahead of this packet
+          if (!g.open) {
+            const stackX = gx - 9 - g.queue * 7;
+            if (p.x >= stackX - 0.5) {
+              if (now - g.last > g.interval) { g.last = now; }   // released → let it pass
+              else { p.x = Math.min(p.x, stackX); blocked = true; }
+            }
+            g.queue++;
+          }
+          break;
+        }
+      }
+      if (!blocked) p.x += baseV() * dt;
+    }
+    particles = particles.filter((p) => p.x < W - 8);
+
+    draw(now);
+  }
+  function step(now) {
+    tick(now);
+    if (running) requestAnimationFrame(step);
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    // track
+    ctx.strokeStyle = C.track;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(nodeX[0], lineY);
+    ctx.lineTo(nodeX[nodeX.length - 1], lineY);
+    ctx.stroke();
+
+    // particles
+    for (const p of particles) {
+      const y = lineY + p.lane * 9 + Math.sin(now / 320 + p.seed) * 2.2;
+      ctx.beginPath();
+      ctx.arc(p.x, y, 2.6, 0, 6.2832);
+      ctx.fillStyle = C.blue;
+      ctx.shadowColor = C.blue;
+      ctx.shadowBlur = 7;
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // nodes + gates
+    ctx.textAlign = "center";
+    for (let i = 0; i < FLOW_STAGES.length; i++) {
+      const s = FLOW_STAGES[i], x = nodeX[i];
+      const g = gates.find((gg) => gg.i === i);
+      if (g) {
+        const open = g.open, col = open ? C.green : C.gold;
+        // gate posts
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(x, lineY - 15); ctx.lineTo(x, lineY + 15);
+        ctx.stroke();
+        // lock / open glyph chip
+        roundRect(x - 8, lineY - 26, 16, 13, 3);
+        ctx.fillStyle = open ? "rgba(79,211,154,0.18)" : "rgba(255,212,71,0.16)";
+        ctx.fill();
+        ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.stroke();
+        ctx.fillStyle = col;
+        ctx.font = "9px ui-monospace, monospace";
+        ctx.fillText(open ? "✓" : "▢", x, lineY - 17);
+      } else {
+        roundRect(x - 5, lineY - 5, 10, 10, 2.5);
+        ctx.fillStyle = C.node;
+        ctx.fill();
+        ctx.strokeStyle = C.track; ctx.lineWidth = 1.2; ctx.stroke();
+      }
+      // label
+      ctx.fillStyle = g ? (g.open ? C.green : C.gold) : C.dim;
+      ctx.font = (g ? "600 " : "") + "10px ui-monospace, SFMono-Regular, monospace";
+      ctx.fillText(s.label.toUpperCase(), x, lineY + 30);
+    }
+  }
+
+  return {
+    start() { if (!running) { running = true; lastT = 0; requestAnimationFrame(step); } },
+    stop() { running = false; },
+    tick,   // exposed for deterministic frame-driving during testing
+  };
+}
+
+// instantiate each diagram; only animate while it's on screen
+document.querySelectorAll("canvas.flowviz").forEach((cv) => {
+  const openKeys = FLOW_OPEN[cv.dataset.flow] || [];
+  const viz = makeFlow(cv, openKeys);
+  const io = new IntersectionObserver((es) => {
+    es.forEach((e) => (e.isIntersecting ? viz.start() : viz.stop()));
+  }, { threshold: 0.15 });
+  io.observe(cv);
 });
 </script>
 </body>

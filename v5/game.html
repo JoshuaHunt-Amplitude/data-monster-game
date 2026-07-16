@@ -184,6 +184,15 @@
     #minimap { bottom: 104px; }
   }
 
+  /* Geist Pixel — reuse the hero's dot-matrix typography (ELSH: 20 Circle, 60 Triangle) */
+  @font-face {
+    font-family: "Geist Pixel";
+    src: url("../assets/geist-pixel.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+  }
+
+  /* ===== Retro title screen ===== */
   #title-card {
     position: fixed;
     inset: 0;
@@ -191,44 +200,72 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 4;
+    z-index: 6;
     text-align: center;
-    background: radial-gradient(ellipse at center, rgba(20,12,52,0.75), rgba(11,5,36,0.92));
-    transition: opacity 0.8s ease;
-    pointer-events: none;
+    background: #05060c;
+    overflow: hidden;
+    cursor: pointer;
+    transition: opacity 0.6s ease;
+  }
+  /* starfield */
+  #title-card::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 30px 40px, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 140px 90px, #cdd6ff, transparent),
+      radial-gradient(1px 1px at 220px 30px, #fff, transparent),
+      radial-gradient(1px 1px at 80px 160px, #9aa7ff, transparent),
+      radial-gradient(1.5px 1.5px at 190px 205px, #fff, transparent),
+      radial-gradient(1px 1px at 260px 130px, #ff6b6b, transparent),
+      radial-gradient(1px 1px at 12px 210px, #fff, transparent);
+    background-size: 280px 240px;
+    opacity: 0.55;
+  }
+  #title-card.hidden { opacity: 0; pointer-events: none; }
+
+  #title-card .tc-logo { position: relative; z-index: 2; line-height: 0.92; }
+  #title-card .tc-line {
+    display: block;
+    font-family: "Geist Pixel", monospace;
+    font-weight: 400;
+    color: #7a84ff;
+    letter-spacing: 0.02em;
+    font-size: clamp(46px, 9vw, 104px);
+    /* blocky 3D extrude, NES-logo style */
+    text-shadow: 3px 3px 0 #2b3196, 6px 6px 0 #1a1e5a;
+  }
+  #title-card .tc-line.tri    { font-variation-settings: "ELSH" 60; }
+  #title-card .tc-line.circle { font-variation-settings: "ELSH" 20; }
+  #title-card .tc-tag {
+    position: relative; z-index: 2; margin-top: 20px;
+    font-family: var(--font-mono); font-size: clamp(11px, 1.6vw, 15px);
+    letter-spacing: 0.55em; text-indent: 0.55em; text-transform: uppercase;
+    color: #c2c8ff;
+  }
+  #title-card .tc-start {
+    position: relative; z-index: 2; margin-top: 44px;
+    font-family: var(--font-mono); font-size: clamp(12px, 1.6vw, 15px);
+    letter-spacing: 0.28em; text-transform: uppercase; color: #eef0ff;
+  }
+  #title-card .tc-copy {
+    position: absolute; z-index: 2; bottom: 30px; left: 0; right: 0;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.24em; text-transform: uppercase; color: rgba(200,206,255,0.6);
   }
 
-  #title-card.hidden { opacity: 0; }
-
-  #title-card h1 {
-    font-size: clamp(30px, 5vw, 60px);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    text-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
-    margin-bottom: 12px;
-  }
-
-  #title-card .sub {
-    font-family: var(--font-mono);
-    font-size: clamp(12px, 1.5vw, 16px);
-    color: var(--amp-light);
-  }
-
-  /* controls live down in the ground band, steady (no blink) */
-  #title-card .prompt {
-    position: absolute;
-    bottom: 6.5%;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 2.1;
-    letter-spacing: 0.5px;
+  /* in-game controls hint — appears after start, hides once you move */
+  #controls-hint {
+    position: fixed; left: 0; right: 0; bottom: 6.5%;
+    text-align: center; z-index: 5;
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    line-height: 2.1; letter-spacing: 0.5px;
     color: rgba(238, 240, 255, 0.95);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease;
   }
+  #controls-hint.show { opacity: 1; }
 
   #touch-controls { display: none; }
   @media (pointer: coarse) {
@@ -286,19 +323,19 @@
     letter-spacing: 1.5px; text-transform: uppercase; color: var(--amp-light);
     text-shadow: 0 1px 3px rgba(11,5,36,0.9); white-space: nowrap; z-index: 3; pointer-events: none;
   }
-  #title-card h1 { font-size: clamp(26px, 4vw, 44px); }
-  #title-card .play-hint {
-    margin-top: 24px; font-family: var(--font-mono); font-size: 13px; font-weight: 600;
-    letter-spacing: 1.5px; color: var(--amp-light);
-  }
   @media (pointer: coarse) { #minimap-hint { display: none; } }
 </style>
 
 <div id="title-card">
-  <h1>Software Speedrun: The Game</h1>
-  <div class="prompt">→ / ← WALK &nbsp;·&nbsp; DOUBLE-TAP → RUN &nbsp;·&nbsp; ↑ JUMP<br>↑↑ DOUBLE JUMP &nbsp;·&nbsp; ↓ DUCK &nbsp;·&nbsp; E = 🍪 DATA NOM</div>
-  <div class="play-hint">CLICK OR PRESS KEYS TO PLAY</div>
+  <div class="tc-logo">
+    <span class="tc-line tri">SOFTWARE</span>
+    <span class="tc-line circle">SPEEDRUN</span>
+  </div>
+  <div class="tc-tag">The Game</div>
+  <div class="tc-start">Click or press any key to play</div>
+  <div class="tc-copy">© 2026 Amplitude</div>
 </div>
+<div id="controls-hint">→ / ← WALK &nbsp;·&nbsp; DOUBLE-TAP → RUN &nbsp;·&nbsp; ↑ JUMP<br>↑↑ DOUBLE JUMP &nbsp;·&nbsp; ↓ DUCK &nbsp;·&nbsp; E = 🍪 DATA NOM</div>
 
 <div id="touch-controls">
   <div class="pad">
@@ -437,6 +474,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const worldEl = document.getElementById("world");
 const titleCard = document.getElementById("title-card");
+const controlsHint = document.getElementById("controls-hint");
 const hudProgress = document.getElementById("hud-progress");
 const hudZone = document.getElementById("hud-zone");
 
@@ -508,13 +546,27 @@ let started = false;
 let runMult = 1;              // ×1.2 the first time the monster runs through each gate (capped)
 const RUN_MULT_MAX = 5;
 const boostedGates = new Set();   // gates already boosted — walking back through won't stack
+let hasMoved = false;             // controls hint stays up until the monster first moves
+
+// leave the retro title screen → reveal the game + show the controls hint
+function startGame() {
+  if (started) return;
+  started = true;
+  titleCard.classList.add("hidden");
+  if (!hasMoved) controlsHint.classList.add("show");
+}
+// hide the controls hint once the monster actually moves
+function endControls() {
+  hasMoved = true;
+  controlsHint.classList.remove("show");
+}
 
 function pressDir(dir) {
+  if (!started) { startGame(); return; }   // first input just starts the game
   const now = performance.now();
   if (now - lastTap[dir] < DOUBLE_TAP_MS) runLatch[dir] = true;
   lastTap[dir] = now;
   keys[dir] = true;
-  if (!started) { started = true; titleCard.classList.add("hidden"); }
 }
 function releaseDir(dir) {
   keys[dir] = false;
@@ -525,6 +577,11 @@ window.addEventListener("keydown", e => {
   if (e.repeat) {
     if (["ArrowRight","ArrowLeft","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
     return;
+  }
+  if (!started) {   // first key press just leaves the title screen
+    if (["ArrowRight","ArrowLeft","ArrowUp","ArrowDown"," ","w","a","s","d","e","c"].includes(e.key)) {
+      startGame(); e.preventDefault(); return;
+    }
   }
   if (e.key === "ArrowRight" || e.key === "d") { pressDir("right"); e.preventDefault(); }
   if (e.key === "ArrowLeft"  || e.key === "a") { pressDir("left");  e.preventDefault(); }
@@ -537,6 +594,9 @@ window.addEventListener("keyup", e => {
   if (e.key === "ArrowLeft"  || e.key === "a") releaseDir("left");
   if (e.key === "ArrowDown" || e.key === "s") keys.down = false;
 });
+
+// click / tap anywhere on the title screen to start
+window.addEventListener("pointerdown", () => { if (!started) startGame(); });
 
 // Touch controls (double-tap works here too via pressDir)
 function bindHold(id, onDown, onUp) {
@@ -578,7 +638,9 @@ function startTeleport(zi) {
   if (teleport) return;
   const targetX = zi === 0 ? 300 : zi * ZONE_LEN + 420;
   if (Math.abs(targetX - player.x) < 10) return;
+  // scroll/level-nav teleport dismisses the title but skips the controls hint
   if (!started) { started = true; titleCard.classList.add("hidden"); }
+  endControls();
   spawnPoof(player.x, groundY);
   teleport = { targetX, until: performance.now() + 380 };
 }
@@ -633,7 +695,7 @@ window.addEventListener("message", (e) => {
 let eating = 0;
 function startEat() {
   if (teleport || eating > 0 || player.y > 0) return;
-  if (!started) { started = true; titleCard.classList.add("hidden"); }
+  startGame();
   eating = SPRITES.eat.frames / SPRITES.eat.fps + 0.5; // hold the last bite a beat
   player.animTime = 0;
 }
@@ -1294,6 +1356,7 @@ function loop(now) {
   if (!teleport && eating === 0 && keys.left) dir -= 1;
   const running = (dir === 1 && runLatch.right) || (dir === -1 && runLatch.left);
   if (dir !== 0 && !ducking) {
+    endControls();
     player.facing = dir;
     const prevX = player.x;
     player.x += dir * (running ? RUN_SPEED * runMult : WALK_SPEED) * dt;
@@ -1317,7 +1380,8 @@ function loop(now) {
     if (grounded) {
       player.vy = JUMP_VELOCITY;
       jumps = 1;
-      if (!started) { started = true; titleCard.classList.add("hidden"); }
+      startGame();
+      endControls();
     } else if (jumps === 1) {
       player.vy = JUMP_VELOCITY * 0.92;
       jumps = 2;

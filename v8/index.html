@@ -54,11 +54,18 @@
      below the fold so the page reads as an article by default. */
   #landing {
     position: relative; z-index: 1;
-    min-height: 80vh;
+    min-height: 66vh;
     background: var(--canvas);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center;
-    padding: 7vh 0 5vh;
+    padding: 5vh 0 4vh;
+  }
+  /* fade-to-dark over the peeking article at the bottom of the selector screen;
+     JS drives its opacity down to 0 as you scroll into the article */
+  #peek-fade {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 32vh; z-index: 2;
+    background: linear-gradient(to bottom, rgba(8,9,10,0) 0%, rgba(8,9,10,0) 38%, rgba(8,9,10,0.85) 82%, var(--canvas) 100%);
+    pointer-events: none; will-change: opacity;
   }
   /* scroll affordance under the buttons */
   .l-scrollcue {
@@ -121,7 +128,7 @@
     position: fixed;
     top: 20px; left: 28px;
     z-index: 61;
-    display: inline-flex; align-items: center; gap: 8px;
+    display: none; align-items: center; gap: 8px;   /* music is a game-mode thing */
     padding: 6px 6px;
     border: 0; background: transparent;
     color: var(--ink-subtle);
@@ -133,6 +140,7 @@
     cursor: pointer;
     transition: color 0.15s ease;
   }
+  body.mode-game #music-toggle { display: inline-flex; }
   #music-toggle svg { display: block; width: 16px; height: 16px; }
   #music-toggle .ic-muted { display: none; }
   #music-toggle.muted .ic-on { display: none; }
@@ -163,17 +171,36 @@
   body.mode-article .stage { display: none; }
   body.mode-article .editorial { width: 100%; border-right: 0; padding: 0 24px; }
   body.mode-article .reading { max-width: 680px; }
-  body.past-hero.mode-article #toc {
-    display: block; position: fixed; left: max(32px, calc(50vw - 640px)); top: 132px;
-    width: 190px; z-index: 40;
+  /* floating TOC — hidden until you scroll past the hero, then fades up in */
+  body.mode-article #toc {
+    display: block; position: fixed; left: max(32px, calc(50vw - 640px)); top: 152px;
+    width: 200px; z-index: 40;
+    opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
   }
+  body.past-hero.mode-article #toc { opacity: 1; transform: none; pointer-events: auto; }
   #toc .toc-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-tertiary); margin-bottom: 14px; }
-  #toc ol { list-style: none; }
-  #toc a { display: flex; gap: 10px; padding: 7px 0 7px 12px; font-family: var(--font-mono); font-size: 12px; line-height: 1.35; color: var(--ink-tertiary); text-decoration: none; border-left: 1px solid var(--hairline); transition: color 0.15s ease, border-color 0.15s ease; }
+  /* progress rail: grey track + a gradient fill whose height tracks reading progress */
+  #toc ol { list-style: none; position: relative; padding-left: 14px; }
+  #toc ol::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; background: var(--hairline-strong); border-radius: 1px; }
+  #toc ol::after {
+    content: ""; position: absolute; left: 0; top: 4px; width: 2px; height: var(--toc-fill, 0px);
+    background: linear-gradient(to bottom, #3b82f6, #22d3ee);
+    box-shadow: 0 0 8px rgba(59,130,246,0.55); border-radius: 1px;
+    transition: height 0.12s linear;
+  }
+  #toc a { display: flex; gap: 10px; padding: 7px 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.35; color: var(--ink-tertiary); text-decoration: none; transition: color 0.2s ease; }
   #toc a:hover { color: var(--ink-muted); }
-  #toc a.active { color: var(--ink); border-left-color: var(--primary); }
+  #toc a.read { color: var(--ink); }                 /* sections you've passed → white */
+  #toc a.active { color: var(--ink); }                /* current section → white */
   #toc a .n { color: var(--ink-tertiary); }
+  #toc a.read .n, #toc a.active .n { color: var(--ink-subtle); }
   @media (max-width: 1120px) { body.mode-article #toc { display: none; } }
+
+  /* scroll-reveal: article blocks fade + rise in as they enter the viewport */
+  .reveal { opacity: 0; transform: translateY(12px); transition: opacity 0.32s ease, transform 0.32s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
 
   /* eyebrow — taxonomy label, positive tracking, no colored bar */
   .kicker {
@@ -229,7 +256,7 @@
   details.toolchain li code { color: var(--ink); }
 
   section.chapter { padding-top: var(--space-section); scroll-margin-top: 8vh; }
-  section.chapter:first-of-type { padding-top: 12vh; }
+  section.chapter:first-of-type { padding-top: 3vh; }
 
   .pull { border-left: 2px solid var(--hairline-strong); padding: 4px 0 4px 24px; margin: 40px 0; }
   .pull q { font-size: clamp(21px, 2.4vw, 26px); font-variation-settings: "wght" 400; line-height: 1.35; color: var(--ink); font-style: normal; quotes: none; letter-spacing: -0.01em; }
@@ -304,7 +331,7 @@
   </svg>
   <span class="label">MUSIC</span>
 </button>
-<audio id="bgm" loop autoplay preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
+<audio id="bgm" loop preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
 
 <!-- ============================ LANDING (selector) ============================ -->
 <div id="landing">
@@ -321,6 +348,7 @@
   </div>
   <div class="l-scrollcue" aria-hidden="true"><span>Scroll to read</span><span class="chev">&#8964;</span></div>
 </div>
+<div id="peek-fade" aria-hidden="true"></div>
 
 <!-- persistent mode toggle -->
 <div id="mode-toggle">
@@ -653,13 +681,17 @@ document.querySelectorAll("#landing .l-choices button").forEach(b =>
 document.querySelectorAll("#mode-toggle button").forEach(b =>
   b.addEventListener("click", () => setMode(b.dataset.mode)));
 
-// reveal the persistent toggle / TOC once the selector hero scrolls away
+// reveal the toggle / TOC only once the hero has mostly scrolled away (so the
+// TOC doesn't overlap the hero); drive the peek fade-to-dark from scroll too.
 const heroEl = document.getElementById("landing");
+const peekFade = document.getElementById("peek-fade");
 function updatePastHero() {
-  const past = window.scrollY > heroEl.offsetHeight * 0.6;
-  document.body.classList.toggle("past-hero", past);
+  document.body.classList.toggle("past-hero", storyEl.getBoundingClientRect().top < innerHeight * 0.12);
+  const heroH = heroEl.offsetHeight || 1;
+  peekFade.style.opacity = Math.max(0, Math.min(1, 1 - window.scrollY / (heroH * 0.5)));
 }
 addEventListener("scroll", updatePastHero, { passive: true });
+addEventListener("resize", updatePastHero);
 updatePastHero();
 
 // ── Scrollytelling: drive the embedded game from the article scroll ──────────
@@ -675,9 +707,11 @@ const LEVEL_ANCHORS = [
   { id: "ch-receipts",    worldX: 17400 },  // PRODUCTION
 ];
 let gameReady = false;
+let applyMusicMode = () => {};   // set up by the music block below; no-op until then
 function postToGame(msg) { try { gameFrame.contentWindow.postMessage(msg, "*"); } catch (e) {} }
 function onGameMode(on) {
   postToGame({ type: "scrollytelling", on });
+  applyMusicMode(on);            // music plays in game mode only
   if (on) gameScrollSync();
 }
 const stageNavBtns = [...document.querySelectorAll("#stage-nav button")];
@@ -752,16 +786,34 @@ TOC.forEach(([id, label], i) => {
   a.addEventListener("click", e => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); });
   const li = document.createElement("li"); li.appendChild(a); tocOl.appendChild(li);
 });
-const tocLinks = new Map([...document.querySelectorAll("#toc a")].map(a => [a.getAttribute("href").slice(1), a]));
+// TOC progress: read sections turn white, a gradient rail fills with your
+// scroll position, current section = active.
+const tocItems = [...document.querySelectorAll("#toc a")];
+const chapters = [...document.querySelectorAll("section.chapter")];
+function updateToc() {
+  if (!document.body.classList.contains("mode-article")) return;
+  const refY = innerHeight * 0.32;
+  let active = -1;
+  chapters.forEach((c, i) => { if (c.getBoundingClientRect().top <= refY) active = i; });
+  tocItems.forEach((a, i) => {
+    a.classList.toggle("read", i < active);
+    a.classList.toggle("active", i === active);
+  });
+  const first = chapters[0].getBoundingClientRect().top + scrollY;
+  const last = chapters[chapters.length - 1].getBoundingClientRect().top + scrollY;
+  const prog = Math.max(0, Math.min(1, (scrollY + refY - first) / Math.max(1, last - first)));
+  tocOl.style.setProperty("--toc-fill", (prog * (tocOl.offsetHeight - 8)) + "px");
+}
+addEventListener("scroll", updateToc, { passive: true });
+addEventListener("resize", updateToc);
+updateToc();
+
+// scroll-reveal: fade each article block in as it enters the viewport
 {
-  const spy = new IntersectionObserver(es => {
-    es.forEach(e => {
-      if (!e.isIntersecting) return;
-      tocLinks.forEach(a => a.classList.remove("active"));
-      tocLinks.get(e.target.id)?.classList.add("active");
-    });
-  }, { rootMargin: "-45% 0px -45% 0px", threshold: 0 });
-  document.querySelectorAll("section.chapter").forEach(c => spy.observe(c));
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
+  document.querySelectorAll("section.chapter > *").forEach(el => { el.classList.add("reveal"); io.observe(el); });
 }
 
 // scroll progress rail
@@ -771,9 +823,8 @@ addEventListener("scroll", () => {
   prog.style.width = (h > 0 ? (scrollY / h) * 100 : 0) + "%";
 }, { passive: true });
 
-// background music — autoplay-with-sound is blocked until a user gesture,
-// so we start on the first interaction (unless the user has opted out) and
-// keep the toggle in sync.
+// background music — plays only in game mode (starts when you pick "Read &
+// play game"), so it never autoplays while reading the article or on mobile.
 const bgm = document.getElementById("bgm");
 const mbtn = document.getElementById("music-toggle");
 bgm.volume = 0.45;
@@ -783,20 +834,17 @@ function setLabel() {
   mbtn.classList.toggle("muted", !playing);   // swaps the speaker icon (on ↔ slashed)
   mbtn.title = playing ? "Mute music" : "Unmute music";
 }
-function tryStart(e) {
-  if (e && mbtn.contains(e.target)) return; // let the button's own handler decide
-  if (userPaused || !bgm.paused) return;
-  bgm.play().then(setLabel).catch(() => {});
-}
-// attempt autoplay on load; browsers that block it fall back to first gesture
-bgm.play().then(setLabel).catch(() => setLabel());
-["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev =>
-  addEventListener(ev, tryStart, { passive: true }));
+// wired into onGameMode via the applyMusicMode hook declared earlier
+applyMusicMode = function (inGame) {
+  if (inGame && !userPaused) bgm.play().then(setLabel).catch(() => setLabel());
+  else { bgm.pause(); setLabel(); }
+};
 mbtn.addEventListener("click", () => {
   if (bgm.paused) { userPaused = false; bgm.play().catch(() => {}); }
   else { userPaused = true; bgm.pause(); }
   setLabel();
 });
+applyMusicMode(document.body.classList.contains("mode-game"));   // sync initial state
 
 // The embedded game (game.html) is a v3-tailored copy: content cards removed,
 // simplified splash, minimap teleport hint — so no chrome injection needed here.

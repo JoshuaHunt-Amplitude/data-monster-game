@@ -237,11 +237,12 @@
     background: var(--canvas);
     overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    padding: 2vh 14px;
+    padding: 0;
   }
-  /* arcade cabinet — the game sits exactly inside the screen cutout; the
-     opaque frame (drawn on top) masks any bleed past the screen edges */
-  .arcade { position: relative; aspect-ratio: 802 / 1331; height: 96vh; max-width: 100%; }
+  /* arcade cabinet — fills the panel width and bleeds past top/bottom (clipped
+     by .stage) for a bigger screen; the game sits exactly inside the screen
+     cutout and the opaque frame (on top) masks any bleed past the screen edges */
+  .arcade { position: relative; aspect-ratio: 802 / 1331; width: 100%; height: auto; }
   .arcade iframe {
     position: absolute; border: 0; display: block; background: #05060c;
     left: 11.97%; top: 17.03%; width: 75.81%; height: 54.97%;

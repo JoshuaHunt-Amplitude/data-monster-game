@@ -204,6 +204,20 @@
   .editorial em { font-style: italic; color: var(--ink-muted); }
   .editorial a { color: var(--primary); text-decoration: none; }
   .editorial a:hover { color: var(--primary-hover); }
+  .editorial ul.prose-list { list-style: none; margin: 0 0 20px; padding: 0; }
+  .editorial ul.prose-list > li { position: relative; padding-left: 22px; margin-bottom: 14px; font-size: 18px; line-height: 1.6; color: var(--ink-muted); }
+  .editorial ul.prose-list > li::before { content: ""; position: absolute; left: 4px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-tertiary); }
+  .editorial ul.prose-list > li strong { color: var(--ink); font-variation-settings: "wght" 590; }
+  code { font-family: var(--font-mono); font-size: 0.88em; color: var(--ink-muted); }
+
+  details.toolchain { margin: 12px 0 0; }
+  details.toolchain summary { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em; color: var(--primary); cursor: pointer; list-style: none; }
+  details.toolchain summary::-webkit-details-marker { display: none; }
+  details.toolchain summary::after { content: " ▾"; color: var(--ink-tertiary); }
+  details.toolchain[open] summary::after { content: " ▴"; }
+  details.toolchain ul { list-style: none; margin: 14px 0 0; padding: 16px 18px; background: var(--surface-2); border: 0.5px solid var(--hairline); border-radius: var(--radius-button); }
+  details.toolchain li { font-family: var(--font-mono); font-size: 13px; line-height: 1.9; color: var(--ink-subtle); }
+  details.toolchain li code { color: var(--ink); }
 
   section.chapter { padding-top: var(--space-section); scroll-margin-top: 8vh; }
   section.chapter:first-of-type { padding-top: 12vh; }
@@ -290,7 +304,7 @@
     <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
   </div>
 
-  <p class="hero-sub">The story of how Amplitude built an anonymous AI software factory and increased PRs by 3x</p>
+  <p class="hero-sub">How we 3&times;&rsquo;d PRs in 6 months, and how you can too</p>
 
   <a class="scroll-cta" href="#story">SCROLL OR PRESS <span class="arrow">↓</span> TO BEGIN</a>
 </section>
@@ -301,109 +315,177 @@
     <div class="reading">
 
       <section class="chapter" id="ch-intro">
-        <h2 class="title">Have you ever tried to <span class="px" data-shape="circle" data-tip="Completing a game as fast as possible — condensing hours of intended playtime into minutes.">speedrun</span> a <span class="px" data-shape="circle">video game?</span></h2>
-        <p>Most people think it takes superhuman reflexes — do the same thing every time, just mechanically faster. It's not that simple. Speedrunners spend most of their time studying the route and engineering the system and environment to go faster each time.</p>
+        <h2 class="title">Have you ever tried to <span class="tip" data-tip="Completing a game as fast as possible, often condensing a game built for hours of playtime and finishing it in minutes.">speedrun</span> a video game?</h2>
+        <p>Most people think it takes superhuman reflexes. Do the same thing every time, just mechanically faster. It&rsquo;s not that simple. Speedrunners spend most of their time studying the route and engineering the system and environment to go faster each time.</p>
         <p>Building our autonomous software factory feels the same. We wanted to see how fast we could get software into the hands of our customers.</p>
-        <p><strong>After 6 months, we've 3×'d our PRs</strong> — and this is how we did it, so you can too.</p>
+        <p><strong>After 6 months, we&rsquo;ve 3x&rsquo;d our PRs.</strong></p>
       </section>
 
       <section class="chapter" id="ch-why">
-        <h2 class="title">Why does <span class="px" data-shape="circle">speed</span> matter, really?</h2>
+        <h2 class="title">Why does speed matter, really?</h2>
         <div class="pull">
           <q>AI has made building cheap. Knowing what to build and how it works is the new game.</q>
-          <span class="cite">— Wade Chambers, Chief Engineering Officer, Amplitude</span>
+          <span class="cite">&mdash; Wade Chambers, Chief Engineering Officer, Amplitude</span>
         </div>
-        <p>Once the software factory gets fast, any idea becomes possible and the real judgment is in knowing which ones are worth trying. You can build the smallest version, put it out there, see if it moved your guiding metric, then do it all over again.</p>
-        <p>The goal is to run smaller experiments and see good ideas surface much faster. With the same headcount, that's how you out-iterate everyone else.</p>
-        <p>By speeding up our software factory, we're moving engineers from <em>in</em> the software loop — doing every step — to <em>on</em> the loop, steering it.</p>
+        <p>Once the software factory gets fast, any idea becomes possible and the real judgment is in knowing which ones are worth trying. You can build the smallest version, put it out there, see if it moved your guiding metric, then do it all over again. The goal is to run smaller experiments and see good ideas surface much faster. With the same headcount, that&rsquo;s how you out-iterate everyone else.</p>
+        <p>By speeding up our software factory, we&rsquo;re moving engineers from <em>in</em> the software loop, doing every step, to <em>on</em> the loop, steering it.</p>
       </section>
 
       <section class="chapter" id="ch-gates">
-        <h2 class="title">The <span class="px" data-shape="circle">gates</span> slowing us down</h2>
-        <p>Building software is untidy, but the path it goes through is less so. An idea becomes code, the code gets validated and reviewed, then it gets deployed to production. For us, that path slowed down at a few specific steps.</p>
+        <h2 class="title">The gates slowing us down</h2>
+        <p>Think of software development as a pipeline. An idea becomes code, the code gets validated and reviewed, and then it gets deployed to production. That path is the same whether the change is a one-line bug fix, a new feature release, or a sweeping migration across the codebase. Simple enough. But for us, it slowed down at a few specific steps.</p>
         <div class="diagram" data-diagram="pipeline">
-          <div class="dlabel">The pipeline · gates in gold</div>
-          <canvas class="flowviz" data-flow="constrained" aria-label="Data flowing through the delivery pipeline, bunching up at the manual gates"></canvas>
-          <div class="plegend">Before our bet, every step was manual except staging deploys. Engineers pieced together unreproducible local environments that could take up to 30 minutes to spin up — on a bad day, most of their time went to setting up and shipping a single change.</div>
+          <div class="dlabel">The pipeline &middot; Idea &rarr; Code &rarr; Validation &rarr; Review &rarr; Production</div>
+          <canvas class="flowviz" data-flow="constrained" aria-label="Changes flowing through the delivery pipeline, bunching up at the manual gates"></canvas>
         </div>
-        <p>Despite its flaws, this design worked for years because writing code was the slowest part of the system — a natural limit on how many changes could enter the pipeline at once. But agents changed that. Faster code generation turned a trickle of PRs into a flood, and the manual validating, reviewing, and approving became the stoppage points.</p>
-        <p>This is the <strong>Theory of Constraints</strong>: speed up one part of the system and the goal post just moves to the next-slowest step. A beautifully messy problem — and we were up for it. The heaviest gates to push through were the ones that stayed manual: <strong>validation</strong>, <strong>review</strong>, and <strong>approval</strong>.</p>
+        <p>Before we made a bet on our software factory, most steps in the pipeline were manual. Engineers worked in local environments they had to assemble themselves. Setting one up meant figuring out which dependencies (and the dependencies of dependencies) were needed for testing, then spinning them up. The local frontend alone could take up to 3 minutes to start, and CI runs could stretch beyond 30 minutes. On a bad day, an engineer could lose most of their time just setting up and shipping a single change.</p>
+        <p>Despite its flaws, this design worked for years because writing code was the slowest part of the system. It was a natural limitation on how many changes could enter the pipeline at once. But agents changed that. Faster code generation meant that a trickle of PRs suddenly became a flood, and the manual validating, reviewing, and approval became the stoppage points.</p>
+        <p>This is the <strong>Theory of Constraints</strong>, the idea that every system has one main bottleneck that limits how fast the whole thing can move. Speeding up one part of the system moves the goal post to the next-slowest step. What a beautifully messy problem to solve! We were up for the challenge.</p>
+        <p>For us, the heaviest gates to push through were the ones that stayed largely manual: validation, review, and approval.</p>
       </section>
 
       <section class="chapter" id="ch-foundations">
-        <h2 class="title">Fix how we <span class="px" data-shape="circle">ship</span>, not just what</h2>
-        <p>When Stripe built their coding agent, they found something interesting: what's good for agents is good for humans, too. We agree — but we hadn't made it a priority. For years we optimized for <em>what</em> we shipped; agents forced us to finally fix <em>how</em> we ship. The bright side? It also made us improve much faster than expected.</p>
+        <h2 class="title">Rebuilding the foundations</h2>
+        <p>When Stripe built their coding agent, they found something interesting: What&rsquo;s good for agents is good for humans, too. We agree.</p>
+        <p>But we hadn&rsquo;t made it a priority. For years, we optimized for <em>what</em> we shipped, but agents forced us to finally fix <em>how</em> we ship. Brightside? They also helped us improve much faster than expected.</p>
         <div class="stats">
-          <div class="stat"><div class="big">30 → 5 min</div><div class="lab">Frontend CI · <span class="delta">6× faster</span></div></div>
-          <div class="stat"><div class="big">30 → 2.9 min</div><div class="lab">Frontend build (p50) · <span class="delta">~10× faster</span></div></div>
-          <div class="stat"><div class="big">3 min → 28 sec</div><div class="lab">Local app start · <span class="delta">~6× faster</span></div></div>
+          <div class="stat"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
+          <div class="stat"><div class="big">40 min &rarr; 15 min</div><div class="lab">Backend CI &middot; <span class="delta">2&ndash;3&times; faster</span></div></div>
+          <div class="stat"><div class="big">3 min &rarr; 28 sec</div><div class="lab">Local app start &middot; <span class="delta">~6&times; faster</span></div></div>
+          <div class="stat"><div class="big">1&ndash;4 days &rarr; 10&ndash;15 min</div><div class="lab">Week 0 setup</div></div>
         </div>
-        <div class="block"><h3>One containerized environment</h3><p>We replaced local setups with a single containerized definition that anyone — human or agent — can bring up with one command. It spins up in seconds now, down from 25–35 minutes. The frontend is fully containerized and the backend is mid-migration; the bigger next step is making those environments ephemeral, so full-stack changes can be validated and agents can run in parallel without colliding.</p></div>
-        <div class="block"><h3>CI from 25 minutes to under 5</h3><p>Frontend CI runs the checks every PR needs — formatting, linting, type-checking, build, and unit tests — in under five minutes, at roughly a tenth of the cost. Our code lives in a Turborepo monorepo, so remote build caching and running only the projects a change touches did most of the work. When CI is this fast, most engineers stopped coding on their machines and just started pushing PRs.</p></div>
-        <div class="block"><h3>Automated legacy migrations</h3><p>We pointed agents at the patterns that confused them most and let them run the migrations themselves. The largest was three competing design systems in one codebase — Ant Design, in-house Cerulean, and core-ui (Radix + CVA + Tailwind) — consolidating onto core-ui. We did the same with i18n, three translation systems down to one, then codified the changes as agent rules and skills backed by lint checks so no one drifts back into old patterns. Migrations we'd written off for years, finally possible.</p></div>
+        <div class="block">
+          <h3>One containerized environment</h3>
+          <p>Local setups used to be app-specific. To run the full stack, you had to configure your machine properly across several of them and keep 5+ processes running. Local setup was often unstable and could break with new updates. The first-time setup could take between one to four days and help from multiple colleagues. Now you can run two commands and be set up in 10&ndash;15 minutes. Day to day, you can run one command and have the fullstack app running in around 30 seconds.</p>
+        </div>
+        <div class="block">
+          <h3>CI from 30 minutes to under 5</h3>
+          <p>Our frontend CI had been creeping up for years and began approaching 30 minutes. We tackled it in three ways:</p>
+          <ul class="prose-list">
+            <li><strong>Build only what changed.</strong> We leaned into our Turborepo monorepo setup with affected-based builds, so CI only touches the packages a change actually impacts rather than rebuilding everything. We also compiled packages so their outputs could be cached and reused, and paired that with TypeScript isolated declarations so type info emits per-package without cross-package dependencies. Together, this gave us more cache hits, more parallelism, and fewer redundant rebuilds.</li>
+            <li><strong>Trade JavaScript tooling for Rust and Go.</strong> The single biggest lever was replacing our JS-based toolchain with native equivalents. Nearly every tool got roughly an order of magnitude faster.
+              <details class="toolchain">
+                <summary>See the full toolchain</summary>
+                <ul>
+                  <li>TypeScript type checking: <code>tsc &rarr; tsgo</code> (~10&times; faster)</li>
+                  <li>Linting: <code>ESLint &rarr; oxlint</code> (~10&times; faster)</li>
+                  <li>Formatting: <code>Prettier &rarr; oxfmt</code> (~10&times; faster)</li>
+                  <li>Bundling libraries: <code>tsc builds &rarr; tsdown</code> (~10&times; faster)</li>
+                  <li>Bundling apps: <code>esbuild &rarr; rolldown</code> (~2&ndash;3&times; faster)</li>
+                  <li>Testing: <code>Jest &rarr; Vitest</code> + fixed flaky tests (~50% faster)</li>
+                </ul>
+              </details>
+            </li>
+            <li><strong>Parallelize the pipeline itself.</strong> We restructured the CI pipeline to run independent stages concurrently rather than in sequence, squeezing out the remaining wall-clock time that faster tools alone couldn&rsquo;t recover.</li>
+          </ul>
+          <p>A pipeline that once ran at 30 minutes now finishes at a fraction of that time, with most changes clearing CI before an engineer has finished writing their PR description.</p>
+        </div>
+        <div class="block">
+          <h3>Automated legacy migrations</h3>
+          <p>We pointed agents at the patterns that confused them most and let them run the migrations themselves. The largest migration was three competing design systems in one codebase: Ant Design, in-house Cerulean, and core-ui (Radix UI + CVA + Tailwind). We&rsquo;re deprecating the first two and standardizing on core-ui. We did the same with i18n, reducing three translation systems into one. Then we codified the changes as agent rules and skills that are backed by lint checks, so agents (and engineers) don&rsquo;t drift back into old patterns. These were migrations we&rsquo;d written off for years, but agents finally made them possible.</p>
+        </div>
       </section>
 
       <section class="chapter" id="ch-develop">
-        <h2 class="title">From agent-assisted to <span class="px" data-shape="circle">agent-written</span></h2>
-        <p>Improving our DevEx changed how people code in expected and unexpected ways. The obvious: agents write a lot of code now. More surprising: <em>where</em> that code gets written.</p>
-        <div class="block"><h3>Agents took the keyboard</h3><p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor and Claude Code agents — but the progress is uneven. The frontend is far along, while the backend lags because agents can't yet validate those changes safely enough for a human to merge with confidence. Nova, our oldest repo, is still largely hand-written. In general, agent-written code tracks with how old the repo is. The goal: increase agent-generated code across surfaces and eventually let agents take a spec and own the whole change.</p></div>
-        <div class="block"><h3>CI as our new dev environment</h3><p>Once frontend CI dropped under five minutes, working locally was no longer the fast option. Engineers push a branch, let CI run, and review it in GitHub — CI went from the gate you clear after building to the dev environment itself. Because it runs in the cloud, they aren't limited to one change at a time: they can kick off 20 PRs before logging off and review them the next morning. The only limit is knowing what to build, which is why a migration might hit 100 PRs while feature work stays around 1–3.</p></div>
+        <h2 class="title">How we develop now</h2>
+        <p>Improving our developer experience, or <span class="tip" data-tip="The tools, environments, processes, and workflows that shape how easily engineers can go from idea to shipped code.">DevEx</span>, changed how people code in expected and unexpected ways. DevEx is the whole path an engineer travels from idea to shipped: the tools, the environments, and every step in between. The obvious: Agents write a lot of code now. More surprising: Where that code gets written.</p>
+        <div class="block">
+          <h3>Agent-generated code</h3>
+          <p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor, Codex, and Claude Code agents. Nearly all frontend code and most backend code is now agent generated.</p>
+        </div>
+        <div class="block">
+          <h3>CI as our new dev environment</h3>
+          <p>Once frontend CI dropped to under 5 minutes, working locally was no longer the fast option. Engineers now push a branch, let CI run, and review it in GitHub. The CI went from the gate you clear after you build something to the new dev environment for most engineers.</p>
+          <p>This lets engineers parallelize their work. Because it runs in the cloud, they aren&rsquo;t limited to one change at a time. They can kick off 20 PRs before logging off and review them the next morning. The only limit is knowing what to build, which is why a migration might hit 100 PRs, while feature development stays around 1&ndash;3.</p>
+        </div>
       </section>
 
       <section class="chapter" id="ch-validation">
-        <h2 class="title"><span class="px" data-shape="circle">Validation</span></h2>
-        <p>Validation is where we confirm a change does what it's intended to do. In theory every change should go through it. In practice ours was slow and the first thing to go under tight deadlines — especially for new features, where it felt safer to ship without testing something no one was using yet. The result: features launched with unknown bugs customers found later, after the team had lost context and moved on.</p>
-        <p><strong>The code we skip testing today becomes the legacy code of tomorrow.</strong> We had to make validation fast enough not to skip. Automated tests help, but they don't catch what you'd only notice by trying the change yourself — so we made that easy: ship a PR, get a working preview, no local setup.</p>
+        <h2 class="title">Gate 1: Validation</h2>
+        <p>Validation is where we confirm a change does what it&rsquo;s supposed to do. Every change gets validated before it ships, but it was slow. Spinning up the test build used to take 25 minutes, which was long enough that you&rsquo;d start another task while you waited, then lose time and focus switching back and forth.</p>
+        <p>So we made it faster. Automated checks handle most of it, but some things you only catch by trying the change yourself. For that, you can ship a PR and get a working preview in a couple of minutes with no local setup.</p>
         <div class="diagram" data-diagram="gate-validation">
           <div class="dlabel">Unlocking the Validation gate</div>
           <canvas class="flowviz" data-flow="open-validate" aria-label="The Validation gate opens and changes stop piling up behind it"></canvas>
-          <div class="plegend">Previews and ephemerals give every change a fast, trustworthy check, so the Validation gate opens and PRs stop piling up behind it. Still a work in progress: a person can verify almost any change now, but agents can't yet validate backend changes well enough to merge on their own.</div>
         </div>
-        <div class="block"><h3>Frontend previews</h3><p>For a frontend change, the built assets go up to S3 and load as a working copy of the app — with dev tools to flip feature flags and settings, and a deep verification link straight to the page your change affects. Checking a change takes 2–5 minutes of click-through, no local setup needed.</p></div>
-        <div class="block"><h3>Backend ephemerals</h3><p>Backend changes get the same treatment through ephemerals: a live, throwaway copy of the infrastructure spun up for the PR. You get a link to hit the APIs and see what actually works before anything merges.</p></div>
+        <div class="block">
+          <h3>Frontend previews</h3>
+          <p>For a frontend change, the built assets go up to S3 and load as a working copy of the app. It comes with dev tools to flip feature flags and settings, and a deep verification link straight to the page your change affects. Checking a change takes 2&ndash;5 minutes of click-through with no local setup needed.</p>
+        </div>
+        <div class="block">
+          <h3>Backend ephemerals</h3>
+          <p>Backend changes get validated through ephemerals. Add a tag to a PR and it spins up a throwaway copy of the full stack, where an engineer or an agent can hit the APIs or run the feature end to end before it merges. It takes 10 to 15 minutes to spin up.</p>
+        </div>
       </section>
 
       <section class="chapter" id="ch-review">
-        <h2 class="title"><span class="px" data-shape="circle">Review</span> and approval</h2>
-        <p>In the old world every PR needed a human to approve it, but our review culture defaulted to rubber-stamping. Fast, sure — but shallow, and it created social friction anytime someone <em>did</em> give thorough feedback, because it wasn't the norm.</p>
-        <p>How did we get here? We'd adapted to a system that doesn't support meaningful review. Without strong automated validation signals from Gate 1, reviewers would have to manually verify behavioral correctness for every PR — unrealistic at any real throughput — so they skim and approve on trust and structure. An arbitrary gate that added time while catching a fraction of the bugs didn't make sense. So we removed it. Sort of. An automated reviewer now runs on every PR and auto-approves low-risk changes based on our risk model.</p>
-        <div class="stats"><div class="stat"><div class="big">100 → 53 min</div><div class="lab">PR cycle time · p75, main repos · <span class="delta">~2× faster</span></div></div></div>
+        <h2 class="title">Gate 2: Review and approval</h2>
+        <p>Engineers used to spend a big part of their day reviewing other people&rsquo;s changes, or waiting on someone to review theirs. Across the team, review was one of the slowest steps in the pipeline.</p>
+        <p>We changed that by raising our confidence in the code before it reaches review. Stronger linting rules and a design system that handles most of the complexity now cover a lot of what a reviewer used to check by hand. On top of that, an automated reviewer runs on every PR, and a risk model approves the low-risk changes on its own.</p>
+        <p><strong>The average PR is now approved and merged 4.5x faster.</strong></p>
+        <div class="stats"><div class="stat"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div></div>
         <div class="diagram" data-diagram="gate-review">
           <div class="dlabel">Unlocking the Review gate</div>
-          <canvas class="flowviz" data-flow="open-review" aria-label="Low-risk changes flow straight through as the Review and Approval gates open"></canvas>
-          <div class="plegend">Automated review and risk-based auto-approval let low-risk PRs flow straight through — only the risky ones wait for a human.</div>
+          <canvas class="flowviz" data-flow="open-review" aria-label="Low-risk changes flow straight through as the Review and approval gates open"></canvas>
         </div>
-        <div class="block"><h3>Automated code review</h3><p>We run Cursor's Bugbot on every PR in CI. It works out of the box, and we add context when it misses things. So far it catches bugs most humans used to let through — even though we've tripled the PRs we ship, bug reports have fallen by more than half and high-priority issues have dropped too. More code hasn't meant worse code, and Bugbot is a big reason why.</p>
-        <div class="stats"><div class="stat"><div class="big">715 → 319</div><div class="lab">Bug reports / month · <span class="delta">↓ 55%</span></div></div></div></div>
-        <div class="block"><h3>Risk-based auto-approval</h3><p>A risk model scores each change on size, scope, what part of the codebase it touches, test coverage, and whether it modifies public APIs or data models. If a change is low-risk and its comments are resolved, it merges on its own — no human in the loop. It's live for our JS apps and Amplitude, but not yet for Nova. When someone catches a change that shouldn't have merged, it goes into an eval suite and we tune the model so it doesn't happen again.</p></div>
-        <div class="block"><h3>Does it pass SOC2?</h3><p>Turns out SOC2 doesn't need a human to click approve — it needs demonstrable controls: documented criteria, logged decisions, and a way to override. So we documented all of it: what qualifies for auto-approval, what still needs a human, and how to escalate. Approval and validation are separately logged signals, so every decision can be audited after the fact. We brought compliance in early so we didn't have to redesign it later.</p></div>
+        <div class="block">
+          <h3>Automated code review</h3>
+          <p>We use Cursor&rsquo;s Bugbot on every PR in CI. It comes out of the box, and we add context when it misses things. So far, it catches bugs that most humans used to let through. Even though we&rsquo;ve tripled the PRs we ship, bug reports have fallen by more than half (from 715 a month to 319), and high-priority issue reports have also dropped. More code hasn&rsquo;t meant worse code, and Bugbot is a large reason why.</p>
+        </div>
+        <div class="block">
+          <h3>Risk-based auto-approval</h3>
+          <p>We introduced a risk model that scores each change on size, scope, what part of the codebase it touches, test coverage, and whether it modifies public APIs or data models. If a change is low-risk and review comments are resolved, it merges on its own without a human in the loop. When someone catches a change that shouldn&rsquo;t have merged, it goes into an eval suite, and we tune the risk model so it doesn&rsquo;t happen again.</p>
+        </div>
+        <div class="block">
+          <h3>SOC2 compliance</h3>
+          <p>How does auto-approval pass a SOC2 audit? Turns out, SOC2 doesn&rsquo;t need a human to click approve. What it does need is demonstrable controls: documented criteria, logged decisions, and a way to override. So we documented all of it, including what qualifies for auto-approval, what still needs a human, and how someone escalates. Approval and validation are separately logged signals, so every decision can be audited after the fact. We brought compliance in early so we didn&rsquo;t have to redesign it later.</p>
+        </div>
       </section>
 
       <section class="chapter" id="ch-culture">
-        <h2 class="title">A culture of AI <span class="px" data-shape="circle">transformation</span></h2>
-        <p>We improved our systems and tooling and got far, fast. The harder part was creating the culture to get there. Engineers are craftspeople who built careers on clean abstractions, reusable interfaces, and code others can build on — the idea that an agent can do that just as well isn't easy to hear. Getting to broad adoption took two waves: AI fluency (moving from chat-based questions to goal-oriented tasks), then using that fluency to disrupt entire workflows.</p>
-        <div class="pull"><q>AI progression is largely not a technical issue. It's a cultural one.</q><span class="cite">— Wade Chambers, Chief Engineering Officer, Amplitude</span></div>
-        <div class="block"><h3>Start with the leaders</h3><p>Leader ambition can be one of the biggest drags on velocity. You can't ask engineers to hand their work to an agent if their own leaders won't — so we made them go first, literally. Our chief engineering officer asked senior leaders to vibe code in front of the entire EPD org, experiencing the highs and lows of agentic building live on stage. They took the exercise back to their teams, co-developing rather than talking at them.</p></div>
-        <div class="block"><h3>Let anyone ship</h3><p>The biggest positive was handing over the keys and letting non-engineers ship code. Designers, PMs, even marketers use Claude and Cursor to fix bugs and make frontend improvements — faster, because there's no handoff, and often better, because a designer sees the UI with a clear eye and a PM acts on real customer feedback. It was only possible because of the validation and review changes: preview links let them check a change without running anything locally, and each PR deep-links to the exact page that changed. Our advice: make it wildly easy — strong docs, first-time-setup training, and an internal marketplace of shared skills.</p><div class="stats"><div class="stat"><div class="big">~5%</div><div class="lab">of PRs from non-engineers — high-value, and growing</div></div></div></div>
-        <div class="block"><h3>Spend where it counts</h3><p>We don't cap AI spend — if anything, we encourage more. But the model you pick matters as much as how you run it, so we watch high bills and check whether a lighter model would work. A cheaper model lets you run two or three times as much on the same budget. Our CTO recently refactored a major backend to proper typings for <strong>$500</strong> using a cheaper model and a well-planned local script; the same work could have easily cost tens of thousands. Don't feel constrained by tokens — choose the right model for the job.</p></div>
-        <div class="block"><h3>It's never perfect</h3><p>We made mistakes. First, spreading the effort too thinly across the org — the peanut-butter approach — before shifting to a tiger-team model with AI-pilled engineers embedded across teams. Second, trying to build agents before we had any of the infrastructure in place. There was no need to jump to the end: prioritizing our foundational DevEx is what ultimately helped us move faster.</p></div>
+        <h2 class="title">A culture of AI transformation</h2>
+        <p>We improved our automated systems and tooling and got far, fast. But the harder part was creating the culture to get there.</p>
+        <p>Wade Chambers, Amplitude&rsquo;s chief engineering officer, describes engineers as craftspeople who built their careers on figuring out clean abstractions, reusable interfaces, and code that others can build on. The idea that an agent can do that just as well isn&rsquo;t easy to hear. Getting past it to reach broader adoption took two waves: AI fluency (moving from chat-based questions to goal-oriented tasks), and then using that fluency to disrupt entire workflows.</p>
+        <p>We put a lot of thought into getting both right, and we still had a few hiccups along the way.</p>
+        <div class="pull"><q>AI progression is largely not a technical issue. It&rsquo;s a cultural one.</q><span class="cite">&mdash; Wade Chambers, Chief Engineering Officer, Amplitude</span></div>
+        <div class="block">
+          <h3>Start with the leaders</h3>
+          <p>Leader ambition can be one of the biggest drags on organizational velocity. You can&rsquo;t ask engineers to hand their work to an agent if their own leaders won&rsquo;t. So we made them go first, literally. Amplitude&rsquo;s chief engineering officer asked senior leaders to vibe code in front of the entire EPD org. Leaders experienced the highs and lows of agentic building (and breaking) live on stage. They then took that live-coding exercise back to their own teams to repeat it. This made it feel like leaders were co-developing with their teams, rather than simply talking at them.</p>
+        </div>
+        <div class="block">
+          <h3>Let anyone ship</h3>
+          <div class="stats"><div class="stat"><div class="big">~5%</div><div class="lab">Non-engineer PRs</div></div></div>
+          <p>The biggest positive was handing over the keys to the kingdom and letting non-engineers ship code. Designers, PMs, and even marketers use Claude and Cursor to fix bugs and make frontend improvements.</p>
+          <p>The best part is that they happen much faster because there&rsquo;s no more handoff to eng. And the fixes are often better because the person closest to the problem makes the fix. Jingshu Zhao, Principal Designer at Amplitude, started with a small PR for a button-alignment issue. Soon after, she used Claude Code to reorganize our navigation and sunset low-usage sections.</p>
+          <p>Although non-engineers only make up 5% of our PRs right now, they&rsquo;re high-value changes, and that number continues to grow.</p>
+          <p>Getting non-engineers to code was only possible with the validation and review changes we made to our software factory. Preview links let them check a change without running anything locally, and each PR deep-links to the exact page that changed, so verification is only a short click-through.</p>
+          <p>Our advice for getting non-engineers on board is to make it wildly easy for them. That means strong documentation and training on things like first-time setup and choosing an environment. We also have an internal marketplace for shared skills that anyone can access.</p>
+        </div>
+        <div class="block">
+          <h3>Spend where it counts</h3>
+          <p>We don&rsquo;t cap what people spend on AI. If anything, we encourage more of it. But we&rsquo;ve also learned that the model you pick matters just as much as how you run it, so we pay attention to high bills and see whether a lighter model would work. A less expensive model lets you run two or three times as much with the same budget, so you aren&rsquo;t limited on how much you can justify doing. For example, our CTO recently refactored a major backend to have proper typings for only $500. He used a cheaper model and a well-planned script that was run locally. That same work could have easily cost tens of thousands of dollars. So our guidance is to not feel constrained by tokens, but also to choose the right model for the job.</p>
+        </div>
+        <div class="block">
+          <h3>It&rsquo;s never perfect</h3>
+          <p>We made some mistakes early on. The first was spreading the effort too thinly across the org (the peanut butter approach). We eventually shifted to a tiger team model and embedded AI-pilled engineers across teams to share their knowledge.</p>
+          <p>Another mistake was trying to bite off more than we could chew and build agents before we had any of the infrastructure in place. But there was no need for us to jump to the end. Prioritizing our foundational DevEx is what ultimately helped us move faster.</p>
+        </div>
       </section>
 
       <section class="chapter" id="ch-receipts">
-        <h2 class="title">The <span class="px" data-shape="circle">receipts</span></h2>
+        <h2 class="title">The receipts</h2>
         <div class="receipts-hero">
-          <div class="big">3×</div>
+          <div class="big">3&times;</div>
           <div class="lab">more PRs shipped</div>
         </div>
         <div class="stats receipts-grid">
-          <div class="stat"><div class="big">30 → &lt;5 min</div><div class="lab">Frontend CI · <span class="delta">6× faster</span></div></div>
-          <div class="stat"><div class="big">100 → 53 min</div><div class="lab">PR cycle time · p75 · <span class="delta">~2× faster</span></div></div>
-          <div class="stat"><div class="big">715 → 319</div><div class="lab">Bug reports / month · <span class="delta">↓ 55%</span></div></div>
+          <div class="stat"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
+          <div class="stat"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div>
+          <div class="stat"><div class="big">715 &rarr; 319</div><div class="lab">Bug reports &middot; <span class="delta">&darr; 50%</span></div></div>
           <div class="stat"><div class="big">~5%</div><div class="lab">PRs from non-engineers</div></div>
         </div>
-        <p>Now that building is cheap, the game is knowing what to build — and shipping it first. That's the real speedrun. The Data Monster is still running. →</p>
+        <p>Now that building is cheap, the game is knowing what to build and shipping it first. That&rsquo;s the real speedrun.</p>
       </section>
-
     </div>
   </main>
 

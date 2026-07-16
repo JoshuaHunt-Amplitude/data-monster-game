@@ -224,7 +224,7 @@
   /* diagram frame — neutral surface (particle motif is rebuilt in P3) */
   .diagram { margin: 40px 0; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); padding: 24px; }
   .diagram .dlabel { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: 16px; }
-  .flowviz { display: block; width: 100%; height: 132px; }
+  .flowviz { display: block; width: 100%; height: 152px; }
   .plegend { font-size: 13px; color: var(--ink-subtle); margin-top: 16px; line-height: 1.6; }
 
   .stage {
@@ -648,156 +648,115 @@ mbtn.addEventListener("click", () => {
 // (Scroll-driven auto-teleport removed — the game stays on its title screen
 //  until the reader clicks into it, then plays it manually.)
 
-// ── Pipeline flow viz ───────────────────────────────────────────────────────
-// Data packets flow left→right through the delivery pipeline and bunch up at
-// the manual gates (Validate · Review · Approve). As the story unlocks each
-// gate, that gate turns green and packets stream straight through — the same
-// particle motif reused across all three diagrams.
+// ── Pipeline flow viz (SDLC hourglass) ──────────────────────────────────────
+// A horizontal ribbon of changes streams left→right through the pipeline. At a
+// locked gate the ribbon pinches to a neck and packets funnel + bunch up; when
+// a gate opens the neck widens and they stream straight through. Stage labels
+// light up in turn. Reused across the three diagrams via data-flow.
 const FLOW_STAGES = [
-  { label: "Idea" }, { label: "Code" },
-  { label: "Validate", gate: true, key: "validate" },
-  { label: "Review",   gate: true, key: "review" },
-  { label: "Approve",  gate: true, key: "approve" },
-  { label: "Ship" },
+  { label: "Idea" },
+  { label: "Code" },
+  { label: "Validation", gate: true, key: "validate" },
+  { label: "Review", gate: true, key: "review" },
+  { label: "Production" },
 ];
 const FLOW_OPEN = {
   "constrained":   [],
   "open-validate": ["validate"],
-  "open-review":   ["validate", "review", "approve"],
+  "open-review":   ["validate", "review"],
 };
-const C = {
-  blue: "#8a90c8", light: "#9db9ff", gold: "#8a8f98", green: "#5e6ad2",
-  ink: "#d0d6e0", dim: "#62666d", track: "rgba(138,143,152,0.22)", node: "#141516",
+const FLOW_C = {
+  edge: "rgba(138,143,152,0.24)",
+  ink: "#d0d6e0", dim: "#4a4e57", sub: "#8a8f98", green: "#3fb950",
+  parts: ["#6d7be8", "#4a90d9", "#3fb64f", "#d1a24a"],   // change types (data-viz palette)
 };
 
 function makeFlow(canvas, openKeys) {
   const ctx = canvas.getContext("2d");
-  const gates = FLOW_STAGES.map((s, i) => ({ ...s, i }))
-    .filter((s) => s.gate)
-    .map((g) => ({ ...g, open: openKeys.includes(g.key), last: 0, interval: 520 }));
-  let W = 0, H = 0, lineY = 0, nodeX = [], dpr = 1, particles = [];
-  let lastT = 0, spawnAcc = 0, running = false;
+  const stages = FLOW_STAGES.map((s, i) => ({ ...s, i, open: s.gate ? openKeys.includes(s.key) : true }));
+  const gates = stages.filter((s) => s.gate);
+  let W = 0, H = 0, cy = 0, RH = 0, nodeX = [], dpr = 1, particles = [], lastT = 0, spawnAcc = 0, running = false, t0 = 0;
 
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
     const r = canvas.getBoundingClientRect();
     W = r.width; H = r.height;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    lineY = Math.round(H * 0.42);
-    const padL = 34, padR = 34;
-    nodeX = FLOW_STAGES.map((s, i) => padL + (W - padL - padR) * (i / (FLOW_STAGES.length - 1)));
+    cy = Math.round(H * 0.40);
+    RH = Math.min(46, H * 0.32);
+    const padL = 32, padR = 32;
+    nodeX = stages.map((s, i) => padL + (W - padL - padR) * (i / (stages.length - 1)));
   }
   new ResizeObserver(resize).observe(canvas);
   resize();
 
-  const gateX = (g) => nodeX[g.i];
-  const baseV = () => W / 3.4; // px per second → ~3.4s to cross when unobstructed
+  const SIGMA = 32, NECK = 0.14;
+  function pinch(x) {                 // 0..1 influence of the nearest LOCKED gate
+    let m = 0;
+    for (const g of gates) { if (g.open) continue; const gx = nodeX[g.i]; m = Math.max(m, Math.exp(-((x - gx) ** 2) / (2 * SIGMA * SIGMA))); }
+    return m;
+  }
+  const halfH = (x) => RH * (1 - (1 - NECK) * pinch(x));
+  const baseV = () => W / 3.6;
 
+  function spawn() {
+    particles.push({ x: -6, lane: Math.random() * 2 - 1, col: FLOW_C.parts[(Math.random() * FLOW_C.parts.length) | 0], ph: Math.random() * 6.28, r: 2.1 + Math.random() * 1.3 });
+  }
   function tick(now) {
-    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
-    lastT = now;
-
+    if (!t0) t0 = now;
+    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0; lastT = now;
     spawnAcc += dt;
-    if (spawnAcc > 0.34 && particles.length < 90) {
-      spawnAcc = 0;
-      particles.push({ x: 16, seed: Math.random() * 6.283, lane: (Math.random() - 0.5) });
-    }
-
-    // resolve queueing at locked gates (front-most particle first)
-    particles.sort((a, b) => b.x - a.x);
-    for (const g of gates) g.queue = 0;
+    while (spawnAcc > 0.09 && particles.length < 130) { spawnAcc -= 0.09; spawn(); }
     for (const p of particles) {
-      let blocked = false;
-      for (const g of gates) {
-        const gx = gateX(g);
-        if (p.x < gx - 1) {                 // nearest gate ahead of this packet
-          if (!g.open) {
-            const stackX = gx - 9 - g.queue * 7;
-            if (p.x >= stackX - 0.5) {
-              if (now - g.last > g.interval) { g.last = now; }   // released → let it pass
-              else { p.x = Math.min(p.x, stackX); blocked = true; }
-            }
-            g.queue++;
-          }
-          break;
-        }
-      }
-      if (!blocked) p.x += baseV() * dt;
+      const slow = 0.16 + 0.84 * (1 - pinch(p.x));    // crawl through a locked neck → bunch up
+      p.x += baseV() * slow * dt;
     }
-    particles = particles.filter((p) => p.x < W - 8);
-
+    particles = particles.filter((p) => p.x < W + 6);
     draw(now);
   }
-  function step(now) {
-    tick(now);
-    if (running) requestAnimationFrame(step);
-  }
-
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
+  function step(now) { tick(now); if (running) requestAnimationFrame(step); }
 
   function draw(now) {
     ctx.clearRect(0, 0, W, H);
-    // track
-    ctx.strokeStyle = C.track;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(nodeX[0], lineY);
-    ctx.lineTo(nodeX[nodeX.length - 1], lineY);
-    ctx.stroke();
-
-    // particles
-    for (const p of particles) {
-      const y = lineY + p.lane * 9 + Math.sin(now / 320 + p.seed) * 2.2;
+    const x0 = nodeX[0], x1 = nodeX[nodeX.length - 1];
+    // ribbon silhouette
+    ctx.strokeStyle = FLOW_C.edge; ctx.lineWidth = 1;
+    for (const sign of [-1, 1]) {
       ctx.beginPath();
-      ctx.arc(p.x, y, 2.6, 0, 6.2832);
-      ctx.fillStyle = C.blue;
-      ctx.shadowColor = C.blue;
-      ctx.shadowBlur = 7;
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-
-    // nodes + gates
-    ctx.textAlign = "center";
-    for (let i = 0; i < FLOW_STAGES.length; i++) {
-      const s = FLOW_STAGES[i], x = nodeX[i];
-      const g = gates.find((gg) => gg.i === i);
-      if (g) {
-        const open = g.open, col = open ? C.green : C.gold;
-        // gate posts
-        ctx.strokeStyle = col;
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
-        ctx.moveTo(x, lineY - 15); ctx.lineTo(x, lineY + 15);
-        ctx.stroke();
-        // lock / open glyph chip
-        roundRect(x - 8, lineY - 26, 16, 13, 3);
-        ctx.fillStyle = open ? "rgba(79,211,154,0.18)" : "rgba(255,212,71,0.16)";
-        ctx.fill();
-        ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.stroke();
-        ctx.fillStyle = col;
-        ctx.font = "9px ui-monospace, monospace";
-        ctx.fillText(open ? "✓" : "▢", x, lineY - 17);
-      } else {
-        roundRect(x - 5, lineY - 5, 10, 10, 2.5);
-        ctx.fillStyle = C.node;
-        ctx.fill();
-        ctx.strokeStyle = C.track; ctx.lineWidth = 1.2; ctx.stroke();
+      for (let x = x0; x <= x1; x += 4) {
+        const y = cy + sign * halfH(x);
+        x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
-      // label
-      ctx.fillStyle = g ? (g.open ? C.green : C.gold) : C.dim;
-      ctx.font = (g ? "600 " : "") + "10px ui-monospace, SFMono-Regular, monospace";
-      ctx.fillText(s.label.toUpperCase(), x, lineY + 30);
+      ctx.stroke();
+    }
+    // packets
+    for (const p of particles) {
+      const hh = halfH(p.x);
+      const y = cy + p.lane * hh + Math.sin(now / 500 + p.ph) * 1.1;
+      ctx.beginPath(); ctx.arc(p.x, y, p.r, 0, 6.2832);
+      ctx.fillStyle = p.col; ctx.globalAlpha = 0.92; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // gate posts
+    for (const g of gates) {
+      const x = nodeX[g.i], hh = halfH(x), col = g.open ? FLOW_C.green : FLOW_C.sub;
+      ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x, cy - hh - 9); ctx.lineTo(x, cy - hh - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, cy + hh + 2); ctx.lineTo(x, cy + hh + 9); ctx.stroke();
+    }
+    // stage labels — a playhead lights each up in turn
+    const active = Math.floor(((now - t0) / 1100) % stages.length);
+    ctx.textAlign = "center";
+    const labelY = cy + RH + 26;
+    for (const s of stages) {
+      const x = nodeX[s.i];
+      ctx.fillStyle = FLOW_C.dim; ctx.fillRect(x - 1.5, cy - 1.5, 3, 3);
+      let col = s.gate ? (s.open ? FLOW_C.green : FLOW_C.sub) : FLOW_C.dim;
+      if (s.i === active) col = FLOW_C.ink;
+      ctx.fillStyle = col;
+      ctx.font = (s.i === active ? "600 " : "") + "10px ui-monospace, SFMono-Regular, monospace";
+      ctx.fillText(s.label.toUpperCase(), x, labelY);
     }
   }
 
@@ -807,7 +766,6 @@ function makeFlow(canvas, openKeys) {
     tick,   // exposed for deterministic frame-driving during testing
   };
 }
-
 // instantiate each diagram; only animate while it's on screen
 document.querySelectorAll("canvas.flowviz").forEach((cv) => {
   const openKeys = FLOW_OPEN[cv.dataset.flow] || [];

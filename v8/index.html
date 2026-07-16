@@ -104,6 +104,19 @@
   #mode-toggle button.active { color: var(--ink); }
   #mode-toggle .sep { color: var(--ink-tertiary); padding: 0 2px; }
 
+  /* pipeline-stage nav (game mode) — top-center TOC that also moves the monster */
+  #stage-nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 61; display: none; gap: 6px; }
+  body.mode-game.past-hero #stage-nav { display: inline-flex; }
+  #stage-nav button {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 7px 11px; border: 0.5px solid var(--hairline-strong); background: rgba(15,16,17,0.72);
+    color: var(--ink-subtle); border-radius: var(--radius-button); cursor: pointer;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  #stage-nav button:hover { color: var(--ink); border-color: var(--ink-tertiary); }
+  #stage-nav button.active { color: #fff; background: #3B82F6; border-color: #3B82F6; }
+
   #music-toggle {
     position: fixed;
     top: 20px; left: 28px;
@@ -318,6 +331,16 @@
 
 <!-- floating table of contents (article mode) -->
 <nav id="toc" aria-label="Contents"><div class="toc-label">Contents</div><ol></ol></nav>
+
+<!-- pipeline-stage nav (game mode) — jumps to a chapter + moves the monster;
+     doubles as the game-mode table of contents -->
+<nav id="stage-nav" aria-label="Pipeline stages">
+  <button data-anchor="ch-intro">Idea</button>
+  <button data-anchor="ch-foundations">Code</button>
+  <button data-anchor="ch-validation">Validation</button>
+  <button data-anchor="ch-review">Review</button>
+  <button data-anchor="ch-receipts">Production</button>
+</nav>
 
 <!-- ============================ STORY ============================ -->
 <div class="split" id="story">
@@ -657,27 +680,34 @@ function onGameMode(on) {
   postToGame({ type: "scrollytelling", on });
   if (on) gameScrollSync();
 }
+const stageNavBtns = [...document.querySelectorAll("#stage-nav button")];
 function gameScrollSync() {
   if (!document.body.classList.contains("mode-game")) return;
   const refY = innerHeight * 0.45;   // viewport reference line the anchors cross
   const pts = LEVEL_ANCHORS.map(a => ({
     y: (document.getElementById(a.id)?.getBoundingClientRect().top ?? 0), x: a.worldX,
   }));
-  let worldX;
-  if (refY <= pts[0].y) worldX = pts[0].x;
-  else if (refY >= pts[pts.length - 1].y) worldX = pts[pts.length - 1].x;
+  let worldX, active = 0;
+  if (refY <= pts[0].y) { worldX = pts[0].x; active = 0; }
+  else if (refY >= pts[pts.length - 1].y) { worldX = pts[pts.length - 1].x; active = pts.length - 1; }
   else {
     for (let i = 0; i < pts.length - 1; i++) {
       if (refY >= pts[i].y && refY < pts[i + 1].y) {
         const t = (refY - pts[i].y) / (pts[i + 1].y - pts[i].y);
         worldX = pts[i].x + (pts[i + 1].x - pts[i].x) * t;
+        active = t < 0.5 ? i : i + 1;   // highlight the nearer stage
         break;
       }
     }
   }
   postToGame({ type: "progress", worldX });
+  stageNavBtns.forEach((b, i) => b.classList.toggle("active", i === active));
 }
 addEventListener("scroll", gameScrollSync, { passive: true });
+// stage-nav clicks: scroll to the chapter (the scroll sync then moves the monster)
+stageNavBtns.forEach(b => b.addEventListener("click", () => {
+  document.getElementById(b.dataset.anchor)?.scrollIntoView({ behavior: "smooth" });
+}));
 // the game announces readiness on load — (re)send the current mode + position
 addEventListener("message", e => {
   if (e.data && e.data.type === "game-ready") {

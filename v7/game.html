@@ -101,7 +101,7 @@
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 0 24px;
     z-index: 3;
     font-family: var(--font-mono);
@@ -139,8 +139,9 @@
     font-family: var(--font-mono);
     font-weight: 600;
     white-space: nowrap;
-    font-size: 12px;
-    padding: 5px 9px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 5px 8px;
     color: var(--text);
     background: rgba(16, 8, 48, 0.75);
     border: 2px solid var(--amp-light);
@@ -288,17 +289,16 @@
 <div id="world"></div>
 
 <div id="hud">
-  <span id="hud-zone">LEVEL 1 · THE OFFICE</span>
   <span id="hud-progress">0%</span>
 </div>
 
 <nav id="level-nav">
   <span class="nav-label">SKIP TO</span>
-  <button data-zone="0">LEVEL 1</button>
-  <button data-zone="1">LEVEL 2</button>
-  <button data-zone="2">LEVEL 3</button>
-  <button data-zone="3">LEVEL 4</button>
-  <button data-zone="4">LEVEL 5</button>
+  <button data-zone="0">IDEA</button>
+  <button data-zone="1">CODE</button>
+  <button data-zone="2">VALIDATION</button>
+  <button data-zone="3">REVIEW</button>
+  <button data-zone="4">PRODUCTION</button>
   <button id="btn-nom" title="data nom nom (E)">🍪</button>
 </nav>
 
@@ -367,11 +367,11 @@ const PLAYER_H = 150;                     // on-screen monster height
 const GROUND_FRAC = 0.82;
 
 const ZONES = [
-  { name: "LEVEL 1 · IDEA",       skyTop: "#141024", skyBot: "#0a0820" },
-  { name: "LEVEL 2 · CODE",       skyTop: "#0d1f38", skyBot: "#000922" },
-  { name: "LEVEL 3 · VALIDATION", skyTop: "#183028", skyBot: "#071521" },
-  { name: "LEVEL 4 · REVIEW",     skyTop: "#12241f", skyBot: "#030b17" },
-  { name: "LEVEL 5 · PRODUCTION", skyTop: "#145eaf", skyBot: "#41a6db" },
+  { name: "IDEA",       skyTop: "#141024", skyBot: "#0a0820" },
+  { name: "CODE",       skyTop: "#0d1f38", skyBot: "#000922" },
+  { name: "VALIDATION", skyTop: "#183028", skyBot: "#071521" },
+  { name: "REVIEW",     skyTop: "#12241f", skyBot: "#030b17" },
+  { name: "PRODUCTION", skyTop: "#145eaf", skyBot: "#41a6db" },
 ];
 
 /* Painted level plates (art by Joshua's generator, sliced by tools/slice_*.py).
@@ -379,11 +379,11 @@ const ZONES = [
    ground = repeating wall strip drawn at parallax 1 under the player's feet.
    fill = color continuing the wall below the strip on tall windows. */
 const PLATES = {
-  0: { bg: loadImg("../assets/idea-bg.png"),       ground: loadImg("../assets/idea-ground.png"),       fill: "#000820" },
-  1: { bg: loadImg("../assets/code-bg.png"),       ground: loadImg("../assets/code-ground.png"),       fill: "#000922" },
-  2: { bg: loadImg("../assets/validation-bg.png"), ground: loadImg("../assets/validation-ground.png"), fill: "#071521" },
-  3: { bg: loadImg("../assets/review-bg.png"),     ground: loadImg("../assets/review-ground.png"),     fill: "#030b17" },
-  4: { bg: loadImg("../assets/production-bg.png"), ground: loadImg("../assets/production-ground.png"), fill: "#141b28" },
+  0: { bg: loadImg("../assets/idea2-bg.png"),       ground: loadImg("../assets/idea2-ground.png"),       fill: "#00031b" },
+  1: { bg: loadImg("../assets/code2-bg.png"),       ground: loadImg("../assets/code2-ground.png"),       fill: "#000112" },
+  2: { bg: loadImg("../assets/validation2-bg.png"), ground: loadImg("../assets/validation2-ground.png"), fill: "#00001a" },
+  3: { bg: loadImg("../assets/review2-bg.png"),     ground: loadImg("../assets/review2-ground.png"),     fill: "#000018" },
+  4: { bg: loadImg("../assets/production2-bg.png"), ground: loadImg("../assets/production2-ground.png"), fill: "#00132e" },
 };
 function loadImg(src) { const i = new Image(); i.src = src; return i; }
 function plateReady(p) { return p && p.bg.complete && p.bg.naturalWidth > 0 && p.ground.complete && p.ground.naturalWidth > 0; }
@@ -525,7 +525,6 @@ function stopStars() { if (starRAF) { cancelAnimationFrame(starRAF); starRAF = n
 window.addEventListener("resize", () => { if (starRAF) resizeStars(); });
 startStars();
 const hudProgress = document.getElementById("hud-progress");
-const hudZone = document.getElementById("hud-zone");
 
 let W = 0, H = 0, groundY = 0;
 function resize() {
@@ -776,11 +775,11 @@ function drawMinimap() {
   // boundaries + level numbers
   mctx.fillStyle = "rgba(11, 5, 36, 0.6)";
   for (let i = 1; i < ZONES.length; i++) mctx.fillRect(x0 + (i / ZONES.length) * w - 1, y0, 2, h);
-  mctx.font = "600 9px 'Geist Mono', monospace";
+  mctx.font = "600 7px 'Geist Mono', monospace";
   mctx.textAlign = "center";
-  mctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+  mctx.fillStyle = "rgba(255, 255, 255, 0.95)";
   for (let i = 0; i < ZONES.length; i++) {
-    mctx.fillText(String(i + 1), x0 + ((i + 0.5) / ZONES.length) * w, y0 + h - 4);
+    mctx.fillText(ZONES[i].name, x0 + ((i + 0.5) / ZONES.length) * w, y0 + h - 4);
   }
   mctx.restore();
 
@@ -1450,7 +1449,6 @@ function loop(now) {
   // HUD + level progress
   maxX = Math.max(maxX, player.x);
   hudProgress.textContent = Math.round((player.x / WORLD_LENGTH) * 100) + "%";
-  hudZone.textContent = ZONES[zoneIndexAt(player.x)].name;
   updateLevelUI();
 
   drawScene(camX, now);

@@ -11,6 +11,14 @@ import numpy as np
 from PIL import Image
 
 CONFIGS = {
+    # v7 pipeline-stage levels (Joshua, 2026-07-16) — all 1908×824, new taller art.
+    # Output to *2-*.png so v6's frozen assets are untouched.
+    "idea2":       {"src": "assets/raw/idea-level-v2.png",       "out": "idea2",       "tile_x": (1600, 1900), "grass_top": 668},
+    "code2":       {"src": "assets/raw/code-level-v2.png",       "out": "code2",       "tile_x": (720, 1020),  "grass_top": 632},
+    "validation2": {"src": "assets/raw/validation-level-v2.png", "out": "validation2", "tile_x": (1280, 1580), "grass_top": 620},
+    "review2":     {"src": "assets/raw/review-level-v2.png",     "out": "review2",     "tile_x": (0, 300),     "grass_top": 608},
+    "production2": {"src": "assets/raw/production-level-v2.png",  "out": "production2", "tile_x": (600, 900),   "grass_top": 644},
+
     # v4 pipeline-stage levels (Joshua, 2026-07-15) — all 2698×583, same layout
     "idea":       {"src": "assets/raw/idea-level.png",       "out": "idea",       "tile_x": (1578, 1878), "grass_top": 489},
     "code":       {"src": "assets/raw/code-level.png",       "out": "code",       "tile_x": (618, 918),   "grass_top": 454},

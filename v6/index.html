@@ -80,7 +80,7 @@
 
   /* persistent mode toggle (after entering) */
   #mode-toggle { position: fixed; top: 18px; right: 24px; z-index: 61; display: none; align-items: center; }
-  body.mode-article #mode-toggle, body.mode-game #mode-toggle { display: inline-flex; }
+  body.mode-article #mode-toggle { display: inline-flex; }
   #mode-toggle button { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; padding: 8px 10px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: var(--radius-button); transition: color 0.15s ease; }
   #mode-toggle button:hover { color: var(--ink-muted); }
   #mode-toggle button.active { color: var(--ink); }
@@ -88,27 +88,25 @@
 
   #music-toggle {
     position: fixed;
-    top: 19px; left: 30px;
+    top: 20px; left: 28px;
     z-index: 61;
-    display: inline-flex; align-items: center; gap: 9px;
-    padding: 10px 14px;
-    border: 1.5px solid #c4c8fa;
-    background: rgba(10,9,18,0.35);
-    color: #dfeef1;
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 6px;
+    border: 0; background: transparent;
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    line-height: 1.25;
+    line-height: 1;
     cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    transition: color 0.15s ease;
   }
   #music-toggle svg { display: block; width: 16px; height: 16px; }
   #music-toggle .ic-muted { display: none; }
   #music-toggle.muted .ic-on { display: none; }
   #music-toggle.muted .ic-muted { display: block; }
-  #music-toggle:hover { color: #fff; border-color: #fff; }
+  #music-toggle:hover { color: var(--ink); }
 
   /* ============================ STORY (split) ============================ */
   :root { --stage-w: 42vw; }
@@ -122,6 +120,11 @@
   }
   .reading { max-width: 560px; margin: 0 auto; padding: 12vh 0 22vh; }
 
+  /* article masthead — only shown on tablet/mobile (no selector there) */
+  .masthead { display: none; padding: 6vh 0 0; margin-bottom: 8px; }
+  .masthead h1 { font-size: clamp(34px, 9vw, 52px); font-variation-settings: "wght" 600; line-height: 1.08; letter-spacing: -0.03em; color: var(--ink); }
+  .masthead .dek { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.03em; color: var(--ink-subtle); margin-top: 16px; }
+
   /* ── reading modes ── */
   #toc { display: none; }
   body.mode-article .split { display: block; }
@@ -129,7 +132,7 @@
   body.mode-article .editorial { width: 100%; border-right: 0; padding: 0 24px; }
   body.mode-article .reading { max-width: 680px; }
   body.mode-article #toc {
-    display: block; position: fixed; left: max(24px, calc(50vw - 560px)); top: 132px;
+    display: block; position: fixed; left: max(32px, calc(50vw - 640px)); top: 132px;
     width: 190px; z-index: 40;
   }
   #toc .toc-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-tertiary); margin-bottom: 14px; }
@@ -241,12 +244,16 @@
     pointer-events: none;
   }
 
-  @media (max-width: 900px) {
-    :root { --stage-w: 100vw; }
-    .split { flex-direction: column; }
-    .editorial { width: 100vw; border-right: 0; order: 2; }
-    .stage { order: 1; position: sticky; top: 0; height: 46vh; width: 100vw; flex-basis: auto; border-bottom: 0.5px solid var(--hairline); }
-    .hero-title canvas.software { margin-left: 14%; }
+  /* Tablet & mobile: article only (no selector, no game), with a title masthead */
+  @media (max-width: 1024px) {
+    #landing, #mode-toggle, .stage { display: none !important; }
+    .split { display: block !important; }
+    .editorial { width: 100% !important; border-right: 0 !important; padding: 0 20px !important; }
+    .reading { max-width: 680px !important; }
+    #toc { display: none !important; }
+    body { overflow: auto !important; }
+    .masthead { display: block; }
+    section.chapter:first-of-type { padding-top: 28px; }
   }
 </style>
 </head>
@@ -261,7 +268,7 @@
   </svg>
   <svg class="ic-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-    <line x1="22" y1="3" x2="6" y2="21"></line>
+    <line x1="14" y1="4" x2="1" y2="20"></line>
   </svg>
   <span class="label">MUSIC</span>
 </button>
@@ -274,7 +281,7 @@
     <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
     <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
   </div>
-  <div class="l-by">By Amplitude</div>
+  <div class="l-by">How Amplitude EPD 3&times;&rsquo;d PRs in 6 months</div>
   <div class="l-choices">
     <button data-mode="game" class="primary"><span class="ic">&#9654;</span> Read &amp; play game</button>
     <button data-mode="article"><span class="ic">&para;</span> Read as article</button>
@@ -295,6 +302,11 @@
 <div class="split" id="story">
   <main class="editorial">
     <div class="reading">
+
+      <header class="masthead">
+        <h1>Speedrunning Software</h1>
+        <p class="dek">How Amplitude EPD 3&times;&rsquo;d PRs in 6 months</p>
+      </header>
 
       <section class="chapter" id="ch-intro">
         <h2 class="title">Have you ever tried to <span class="tip" data-tip="Completing a game as fast as possible, often condensing a game built for hours of playtime and finishing it in minutes.">speedrun</span> a video game?</h2>
@@ -550,21 +562,19 @@ document.querySelectorAll(".l-title canvas").forEach((c, idx) => {
 });
 
 // ── Reading-mode selector (landing → article | game), with a persistent toggle ──
+const isSmall = () => matchMedia("(max-width: 1024px)").matches;
 function setMode(mode) {
   document.body.classList.remove("mode-landing", "mode-article", "mode-game");
   document.body.classList.add("mode-" + mode);
   document.querySelectorAll("#mode-toggle button").forEach(b =>
     b.classList.toggle("active", b.dataset.mode === mode));
-  if (mode !== "landing") {
-    if (location.hash !== "#" + mode) history.replaceState(null, "", "#" + mode);
-    scrollTo(0, 0);
-  }
+  if (mode !== "landing") scrollTo(0, 0);
 }
 document.querySelectorAll("#landing .l-choices button, #mode-toggle button").forEach(b =>
   b.addEventListener("click", () => setMode(b.dataset.mode)));
-// restore mode from the URL (shareable), else show the landing
-const startMode = location.hash.replace("#", "");
-setMode(startMode === "article" || startMode === "game" ? startMode : "landing");
+// always start at the selector — a refresh returns here (like the reference site);
+// tablet/mobile have no selector or game, so they open straight into the article.
+setMode(isSmall() ? "article" : "landing");
 
 // ── Table of contents (article mode) — built from the chapters, with scrollspy ──
 const TOC = [

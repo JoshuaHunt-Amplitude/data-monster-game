@@ -50,15 +50,24 @@
   #progress { position: fixed; top: 0; left: 0; height: 2px; background: var(--primary); width: 0; z-index: 60; }
 
   /* ============================ LANDING (selector) ============================ */
+  /* Selector hero — sits at the top of the scroll document; the article peeks
+     below the fold so the page reads as an article by default. */
   #landing {
-    position: fixed; inset: 0; z-index: 50;
+    position: relative; z-index: 1;
+    min-height: 80vh;
     background: var(--canvas);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center;
-    transition: opacity 0.45s ease;
+    padding: 7vh 0 5vh;
   }
-  body:not(.mode-landing) #landing { opacity: 0; pointer-events: none; }
-  body.mode-landing { overflow: hidden; }
+  /* scroll affordance under the buttons */
+  .l-scrollcue {
+    position: relative; z-index: 2; margin-top: 34px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--ink-tertiary); display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .l-scrollcue .chev { font-size: 14px; animation: cuebob 1.8s ease-in-out infinite; }
+  @keyframes cuebob { 0%,100% { transform: translateY(0); opacity: 0.6; } 50% { transform: translateY(4px); opacity: 1; } }
   /* Unicorn Studio WebGL backdrop — hidden until the game button is hovered */
   #us-bg { position: absolute; inset: 0; z-index: 0; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
   #us-bg canvas { display: block; width: 100% !important; height: 100% !important; }
@@ -87,9 +96,9 @@
   #landing.us-active .l-choices { border-color: rgba(255, 255, 255, 0.55); }
   #landing.us-active .l-choices button:not(.primary) { color: #fff; background: rgba(8, 9, 10, 0.55); }
 
-  /* persistent mode toggle (after entering) */
+  /* persistent mode toggle — appears once you scroll past the selector hero */
   #mode-toggle { position: fixed; top: 18px; right: 24px; z-index: 61; display: none; align-items: center; }
-  body.mode-article #mode-toggle { display: inline-flex; }
+  body.past-hero #mode-toggle { display: inline-flex; }
   #mode-toggle button { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; padding: 8px 10px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: var(--radius-button); transition: color 0.15s ease; }
   #mode-toggle button:hover { color: var(--ink-muted); }
   #mode-toggle button.active { color: var(--ink); }
@@ -127,7 +136,7 @@
     padding: 0 clamp(28px, 6vw, 96px);
     border-right: 0.5px solid var(--hairline);
   }
-  .reading { max-width: 560px; margin: 0 auto; padding: 12vh 0 22vh; }
+  .reading { max-width: 560px; margin: 0 auto; padding: 6vh 0 22vh; }
 
   /* article masthead — only shown on tablet/mobile (no selector there) */
   .masthead { display: none; padding: 6vh 0 0; margin-bottom: 8px; }
@@ -141,7 +150,7 @@
   body.mode-article .stage { display: none; }
   body.mode-article .editorial { width: 100%; border-right: 0; padding: 0 24px; }
   body.mode-article .reading { max-width: 680px; }
-  body.mode-article #toc {
+  body.past-hero.mode-article #toc {
     display: block; position: fixed; left: max(32px, calc(50vw - 640px)); top: 132px;
     width: 190px; z-index: 40;
   }
@@ -267,7 +276,7 @@
   }
 </style>
 </head>
-<body class="mode-landing">
+<body class="mode-article">
 
 <div id="progress"></div>
 <button id="music-toggle" title="Toggle music" aria-label="Toggle music">
@@ -297,6 +306,7 @@
     <button data-mode="game" class="primary"><span class="ic">&#9654;</span> Read &amp; play game</button>
     <button data-mode="article"><span class="ic">&para;</span> Read as article</button>
   </div>
+  <div class="l-scrollcue" aria-hidden="true"><span>Scroll to read</span><span class="chev">&#8964;</span></div>
 </div>
 
 <!-- persistent mode toggle -->
@@ -598,17 +608,35 @@ function renderPixelTitle(c, idx) {
 }
 document.querySelectorAll(".l-title canvas, .mh-title canvas").forEach(renderPixelTitle);
 
-// ── Reading-mode selector (landing → article | game), with a persistent toggle ──
+// ── Reading modes: article (default) | game (scrollytelling split) ──
+// The selector is a hero at the top of the scroll document; the article lives
+// below it. Choosing a mode swaps the layout and scrolls down into the article.
 const isSmall = () => matchMedia("(max-width: 1024px)").matches;
+const storyEl = document.getElementById("story");
 function setMode(mode) {
-  document.body.classList.remove("mode-landing", "mode-article", "mode-game");
+  document.body.classList.remove("mode-article", "mode-game");
   document.body.classList.add("mode-" + mode);
   document.querySelectorAll("#mode-toggle button").forEach(b =>
     b.classList.toggle("active", b.dataset.mode === mode));
-  if (mode !== "landing") scrollTo(0, 0);
 }
-document.querySelectorAll("#landing .l-choices button, #mode-toggle button").forEach(b =>
+// selector buttons: set the mode, then glide down to where the article starts
+document.querySelectorAll("#landing .l-choices button").forEach(b =>
+  b.addEventListener("click", () => {
+    setMode(b.dataset.mode);
+    storyEl.scrollIntoView({ behavior: "smooth" });
+  }));
+// persistent toggle: just swap layout, keep scroll position
+document.querySelectorAll("#mode-toggle button").forEach(b =>
   b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+// reveal the persistent toggle / TOC once the selector hero scrolls away
+const heroEl = document.getElementById("landing");
+function updatePastHero() {
+  const past = window.scrollY > heroEl.offsetHeight * 0.6;
+  document.body.classList.toggle("past-hero", past);
+}
+addEventListener("scroll", updatePastHero, { passive: true });
+updatePastHero();
 
 // hovering "Read & play game" fades in the Unicorn Studio backdrop and turns
 // the pixel title white — both only while hovering that button.
@@ -622,9 +650,9 @@ if (gameBtn) {
   gameBtn.addEventListener("focus", on);
   gameBtn.addEventListener("blur", off);
 }
-// always start at the selector — a refresh returns here (like the reference site);
-// tablet/mobile have no selector or game, so they open straight into the article.
-setMode(isSmall() ? "article" : "landing");
+// start in article mode with the selector hero on top; a refresh returns here.
+// choosing "play the game" switches to the scrollytelling split.
+setMode("article");
 
 // ── Table of contents (article mode) — built from the chapters, with scrollspy ──
 const TOC = [

@@ -77,10 +77,15 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   .l-choices button + button { border-left: 0.5px solid var(--hairline-strong); }
-  .l-choices button.primary { background: var(--primary); color: #fff; }
-  .l-choices button.primary:hover { background: var(--primary-hover); }
+  .l-choices button.primary { background: #3B82F6; color: #fff; }
+  .l-choices button.primary:hover { background: #2f74e6; }
   .l-choices button:not(.primary):hover { background: var(--surface-2); color: var(--ink); }
   .l-choices .ic { font-size: 13px; opacity: 0.9; }
+  /* legibility over the backdrop: brighten the subtitle + secondary button and
+     add a scrim/shadow only while the game button is hovered (us-active) */
+  #landing.us-active .l-by { color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8); }
+  #landing.us-active .l-choices { border-color: rgba(255, 255, 255, 0.55); }
+  #landing.us-active .l-choices button:not(.primary) { color: #fff; background: rgba(8, 9, 10, 0.55); }
 
   /* persistent mode toggle (after entering) */
   #mode-toggle { position: fixed; top: 18px; right: 24px; z-index: 61; display: none; align-items: center; }

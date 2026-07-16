@@ -118,8 +118,8 @@
     position: fixed;
     top: 19px; left: 30px;
     z-index: 61;
-    display: inline-flex; align-items: center;
-    padding: 11px 14px;
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 10px 14px;
     border: 1.5px solid #c4c8fa;
     background: rgba(10,9,18,0.35);
     color: #dfeef1;
@@ -132,6 +132,10 @@
     cursor: pointer;
     transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   }
+  #music-toggle svg { display: block; width: 16px; height: 16px; }
+  #music-toggle .ic-muted { display: none; }
+  #music-toggle.muted .ic-on { display: none; }
+  #music-toggle.muted .ic-muted { display: block; }
   #music-toggle:hover { color: #fff; border-color: #fff; }
 
   /* ============================ STORY (split) ============================ */
@@ -256,7 +260,18 @@
 <body>
 
 <div id="progress"></div>
-<button id="music-toggle" title="Toggle music" aria-label="Toggle music"><span class="label">PAUSE MUSIC</span></button>
+<button id="music-toggle" title="Toggle music" aria-label="Toggle music">
+  <svg class="ic-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+  </svg>
+  <svg class="ic-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+    <line x1="22" y1="3" x2="6" y2="21"></line>
+  </svg>
+  <span class="label">MUSIC</span>
+</button>
 <audio id="bgm" loop autoplay preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
 
 <!-- ============================ HERO ============================ -->
@@ -492,14 +507,12 @@ addEventListener("keydown", e => {
 // keep the toggle in sync.
 const bgm = document.getElementById("bgm");
 const mbtn = document.getElementById("music-toggle");
-const mlabel = mbtn.querySelector(".label");
 bgm.volume = 0.45;
 let userPaused = false;
 function setLabel() {
   const playing = !bgm.paused;
-  mbtn.classList.toggle("playing", playing);
-  mbtn.title = playing ? "Pause music" : "Play music";
-  mlabel.textContent = playing ? "PAUSE MUSIC" : "PLAY MUSIC";
+  mbtn.classList.toggle("muted", !playing);   // swaps the speaker icon (on ↔ slashed)
+  mbtn.title = playing ? "Mute music" : "Unmute music";
 }
 function tryStart(e) {
   if (e && mbtn.contains(e.target)) return; // let the button's own handler decide
@@ -519,30 +532,8 @@ mbtn.addEventListener("click", () => {
 // The embedded game (game.html) is a v3-tailored copy: content cards removed,
 // simplified splash, minimap teleport hint — so no chrome injection needed here.
 
-// ── Connect the story to the game ──────────────────────────────────────────
-// Each chapter maps to a game level; as a chapter scrolls to center, we tell
-// the game to teleport the monster there. One step of the story = one level.
-// levels ARE the pipeline stages: 0 IDEA · 1 CODE · 2 VALIDATION · 3 REVIEW · 4 PRODUCTION
-const CHAPTER_ZONE = {
-  "ch-intro": 0, "ch-why": 0, "ch-gates": 1, "ch-foundations": 1,
-  "ch-develop": 1, "ch-validation": 2, "ch-review": 3, "ch-culture": 3, "ch-receipts": 4,
-};
-const gameFrame = document.querySelector(".stage iframe");
-let currentZone = -1;
-function sendZone(z) {
-  if (z === currentZone || z == null) return;
-  currentZone = z;
-  if (gameFrame.contentWindow) {
-    gameFrame.contentWindow.postMessage({ type: "goToZone", zone: z }, "*");
-  }
-}
-const chapterObserver = new IntersectionObserver((entries) => {
-  // the chapter crossing the viewport centerline is the active step
-  entries.forEach((en) => {
-    if (en.isIntersecting) sendZone(CHAPTER_ZONE[en.target.id]);
-  });
-}, { rootMargin: "-45% 0px -45% 0px", threshold: 0 });
-document.querySelectorAll("section.chapter").forEach((c) => chapterObserver.observe(c));
+// (Scroll-driven auto-teleport removed — the game stays on its title screen
+//  until the reader clicks into it, then plays it manually.)
 
 // ── Pipeline flow viz ───────────────────────────────────────────────────────
 // Data packets flow left→right through the delivery pipeline and bunch up at

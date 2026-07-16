@@ -234,10 +234,22 @@
     position: sticky;
     top: 0;
     height: 100vh;
-    background: #05060c;
+    background: var(--canvas);
     overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2vh 14px;
   }
-  .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* arcade cabinet — the game sits exactly inside the screen cutout; the
+     opaque frame (drawn on top) masks any bleed past the screen edges */
+  .arcade { position: relative; aspect-ratio: 802 / 1331; height: 96vh; max-width: 100%; }
+  .arcade iframe {
+    position: absolute; border: 0; display: block; background: #05060c;
+    left: 11.97%; top: 17.03%; width: 75.81%; height: 54.97%;
+  }
+  .arcade .arcade-frame {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 2; image-rendering: pixelated;
+  }
   .stage .stage-tag {
     position: absolute; top: 14px; left: 14px; z-index: 5;
     font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-subtle);
@@ -488,7 +500,10 @@
   </main>
 
   <aside class="stage">
-    <iframe src="game.html" title="Data Monster side-scroller" scrolling="no"></iframe>
+    <div class="arcade">
+      <iframe src="game.html" title="Data Monster side-scroller" scrolling="no"></iframe>
+      <img class="arcade-frame" src="../assets/arcade-frame.png" alt="" aria-hidden="true">
+    </div>
   </aside>
 </div>
 

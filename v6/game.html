@@ -112,12 +112,13 @@
     pointer-events: none;
   }
 
-  #level-nav {
+  /* hidden in the arcade layout — level jumping lives on the minimap below */
+  #level-nav { display: none; }
+  #level-nav.__unused {
     position: fixed;
     top: 44px;
     left: 50%;
     transform: translateX(-50%);
-    display: flex;
     align-items: center;
     gap: 6px;
     z-index: 3;
@@ -528,9 +529,14 @@ const hudProgress = document.getElementById("hud-progress");
 const hudZone = document.getElementById("hud-zone");
 
 let W = 0, H = 0, groundY = 0;
+// render more world into a larger backing store than the display box, so the
+// canvas is scaled down to fit → everything (monster, level, ground) reads
+// ~ZOOM of before and more of the level fits on screen. CSS (#game inset:0)
+// keeps the element at the iframe size; only the backing resolution grows.
+const ZOOM = 0.8;
 function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+  W = canvas.width = Math.round(window.innerWidth / ZOOM);
+  H = canvas.height = Math.round(window.innerHeight / ZOOM);
   groundY = Math.round(H * GROUND_FRAC);
   ctx.imageSmoothingEnabled = false;
 }

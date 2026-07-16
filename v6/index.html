@@ -49,86 +49,42 @@
 
   #progress { position: fixed; top: 0; left: 0; height: 2px; background: var(--primary); width: 0; z-index: 60; }
 
-  /* ============================ HERO ============================ */
-  #hero {
-    position: relative;
-    height: 100vh;
-    min-height: 640px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+  /* ============================ LANDING (selector) ============================ */
+  #landing {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--canvas);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    transition: opacity 0.45s ease;
   }
-  .hero-bg {
-    position: absolute; inset: 0;
-    background: #0a0912 url("../assets/office-bg.png") center 28% / cover no-repeat;
+  body:not(.mode-landing) #landing { opacity: 0; pointer-events: none; }
+  body.mode-landing { overflow: hidden; }
+  .l-frame { position: absolute; inset: 18px; border: 0.5px solid var(--hairline-strong); pointer-events: none; }
+  .l-title { position: relative; z-index: 2; padding: 0 clamp(20px, 5vw, 64px); }
+  .l-title canvas { display: block; margin: 0 auto; height: auto; }
+  .l-title canvas.speedrunning { width: min(86vw, 1000px); }
+  .l-title canvas.software { width: min(60vw, 700px); margin-top: 1vw; }
+  .l-by { position: relative; z-index: 2; margin-top: 30px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-subtle); }
+  .l-choices { position: relative; z-index: 2; margin-top: 40px; display: inline-flex; border: 0.5px solid var(--hairline-strong); border-radius: var(--radius-button); overflow: hidden; }
+  .l-choices button {
+    font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em;
+    padding: 13px 22px; border: 0; background: transparent; color: var(--ink-muted);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 9px;
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  /* blue wash + bottom fade to page bg (Figma) */
-  .hero-vignette {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(180deg, rgba(10,9,18,0) 0%, #0a0912 100%),
-      linear-gradient(0deg, rgba(0,7,199,0.55), rgba(0,7,199,0.55));
-  }
-  .hero-frame {
-    position: absolute;
-    inset: 18px;
-    border: 1.5px solid #c4c8fa;
-    pointer-events: none;
-  }
+  .l-choices button + button { border-left: 0.5px solid var(--hairline-strong); }
+  .l-choices button.primary { background: var(--primary); color: #fff; }
+  .l-choices button.primary:hover { background: var(--primary-hover); }
+  .l-choices button:not(.primary):hover { background: var(--surface-2); color: var(--ink); }
+  .l-choices .ic { font-size: 13px; opacity: 0.9; }
 
-  .hero-title {
-    position: relative;
-    z-index: 2;
-    padding: 0 clamp(20px, 4vw, 64px);
-  }
-  .hero-title canvas { display: block; width: 90%; max-width: 1320px; height: auto; }
-  /* SOFTWARE indented right + a small gap below SPEEDRUNNING (Figma stagger, no overlap) */
-  .hero-title canvas.software { margin-left: 27%; margin-top: 1.4vw; width: 64%; max-width: 950px; }
-
-  .hero-sub {
-    position: absolute;
-    left: clamp(20px, 4vw, 64px);
-    bottom: 18%;
-    z-index: 2;
-    max-width: 340px;
-    font-size: clamp(20px, 2vw, 28px);
-    font-weight: 500;
-    line-height: 1.25;
-    letter-spacing: -0.01em;
-    color: #ffffff;
-    opacity: 0;
-    transform: translateY(12px);
-    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
-  }
-  .hero-sub.in { opacity: 1; transform: translateY(0); }
-
-  .scroll-cta {
-    position: absolute;
-    right: clamp(20px, 4vw, 64px);
-    bottom: 9%;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border: 1px solid rgba(196,200,250,0.4);
-    border-radius: 4px;
-    color: #ffffff;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-decoration: none;
-    background: rgba(196,200,250,0.12);
-    /* animate up after 0.5s */
-    opacity: 0;
-    transform: translateY(16px);
-    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
-  }
-  .scroll-cta.in { opacity: 1; transform: translateY(0); }
-  .scroll-cta:hover { color: #fff; border-color: rgba(196,200,250,0.8); background: rgba(196,200,250,0.2); }
-  .scroll-cta .arrow { animation: bob 1.6s ease-in-out infinite; }
-  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+  /* persistent mode toggle (after entering) */
+  #mode-toggle { position: fixed; top: 18px; right: 24px; z-index: 61; display: none; align-items: center; }
+  body.mode-article #mode-toggle, body.mode-game #mode-toggle { display: inline-flex; }
+  #mode-toggle button { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; padding: 8px 10px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: var(--radius-button); transition: color 0.15s ease; }
+  #mode-toggle button:hover { color: var(--ink-muted); }
+  #mode-toggle button.active { color: var(--ink); }
+  #mode-toggle .sep { color: var(--ink-tertiary); padding: 0 2px; }
 
   #music-toggle {
     position: fixed;
@@ -165,6 +121,24 @@
     border-right: 0.5px solid var(--hairline);
   }
   .reading { max-width: 560px; margin: 0 auto; padding: 12vh 0 22vh; }
+
+  /* ── reading modes ── */
+  #toc { display: none; }
+  body.mode-article .split { display: block; }
+  body.mode-article .stage { display: none; }
+  body.mode-article .editorial { width: 100%; border-right: 0; padding: 0 24px; }
+  body.mode-article .reading { max-width: 680px; }
+  body.mode-article #toc {
+    display: block; position: fixed; left: max(24px, calc(50vw - 560px)); top: 132px;
+    width: 190px; z-index: 40;
+  }
+  #toc .toc-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-tertiary); margin-bottom: 14px; }
+  #toc ol { list-style: none; }
+  #toc a { display: flex; gap: 10px; padding: 7px 0 7px 12px; font-family: var(--font-mono); font-size: 12px; line-height: 1.35; color: var(--ink-tertiary); text-decoration: none; border-left: 1px solid var(--hairline); transition: color 0.15s ease, border-color 0.15s ease; }
+  #toc a:hover { color: var(--ink-muted); }
+  #toc a.active { color: var(--ink); border-left-color: var(--primary); }
+  #toc a .n { color: var(--ink-tertiary); }
+  @media (max-width: 1120px) { body.mode-article #toc { display: none; } }
 
   /* eyebrow — taxonomy label, positive tracking, no colored bar */
   .kicker {
@@ -276,7 +250,7 @@
   }
 </style>
 </head>
-<body>
+<body class="mode-landing">
 
 <div id="progress"></div>
 <button id="music-toggle" title="Toggle music" aria-label="Toggle music">
@@ -293,21 +267,29 @@
 </button>
 <audio id="bgm" loop autoplay preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
 
-<!-- ============================ HERO ============================ -->
-<section id="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-vignette"></div>
-  <div class="hero-frame"></div>
-
-  <div class="hero-title">
+<!-- ============================ LANDING (selector) ============================ -->
+<div id="landing">
+  <div class="l-frame"></div>
+  <div class="l-title">
     <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
     <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
   </div>
+  <div class="l-by">By Amplitude</div>
+  <div class="l-choices">
+    <button data-mode="game" class="primary"><span class="ic">&#9654;</span> Read &amp; play game</button>
+    <button data-mode="article"><span class="ic">&para;</span> Read as article</button>
+  </div>
+</div>
 
-  <p class="hero-sub">How we 3&times;&rsquo;d PRs in 6 months, and how you can too</p>
+<!-- persistent mode toggle -->
+<div id="mode-toggle">
+  <button data-mode="game">Read &amp; play game</button>
+  <span class="sep">/</span>
+  <button data-mode="article">Read as article</button>
+</div>
 
-  <a class="scroll-cta" href="#story">SCROLL OR PRESS <span class="arrow">↓</span> TO BEGIN</a>
-</section>
+<!-- floating table of contents (article mode) -->
+<nav id="toc" aria-label="Contents"><div class="toc-label">Contents</div><ol></ol></nav>
 
 <!-- ============================ STORY ============================ -->
 <div class="split" id="story">
@@ -540,8 +522,8 @@ function sizeCanvas(c, w, h) {
   return ctx;
 }
 
-// hero title — dots assemble from random positions on load
-document.querySelectorAll(".hero-title canvas").forEach((c, idx) => {
+// landing title — dots assemble from random positions on load
+document.querySelectorAll(".l-title canvas").forEach((c, idx) => {
   const g = computeDots(c.dataset.pixel, { shape: c.dataset.shape, fontSize: 220, cell: 9 });
   const ctx = sizeCanvas(c, g.w, g.h);
   const color = "#7a84ff", DUR = 520, SPREAD = 650;
@@ -567,12 +549,54 @@ document.querySelectorAll(".hero-title canvas").forEach((c, idx) => {
   })(performance.now());
 });
 
-// inline accent words in subheads now render as real Geist Pixel text (see CSS) —
-// no canvas needed; baseline & spacing come for free from the font.
+// ── Reading-mode selector (landing → article | game), with a persistent toggle ──
+function setMode(mode) {
+  document.body.classList.remove("mode-landing", "mode-article", "mode-game");
+  document.body.classList.add("mode-" + mode);
+  document.querySelectorAll("#mode-toggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.mode === mode));
+  if (mode !== "landing") {
+    if (location.hash !== "#" + mode) history.replaceState(null, "", "#" + mode);
+    scrollTo(0, 0);
+  }
+}
+document.querySelectorAll("#landing .l-choices button, #mode-toggle button").forEach(b =>
+  b.addEventListener("click", () => setMode(b.dataset.mode)));
+// restore mode from the URL (shareable), else show the landing
+const startMode = location.hash.replace("#", "");
+setMode(startMode === "article" || startMode === "game" ? startMode : "landing");
 
-// entrance: hero subhead at 200ms, scroll indicator at 600ms
-setTimeout(() => document.querySelector(".hero-sub").classList.add("in"), 200);
-setTimeout(() => document.querySelector(".scroll-cta").classList.add("in"), 600);
+// ── Table of contents (article mode) — built from the chapters, with scrollspy ──
+const TOC = [
+  ["ch-intro", "Introduction"],
+  ["ch-why", "Why speed matters"],
+  ["ch-gates", "The gates"],
+  ["ch-foundations", "Rebuilding the foundations"],
+  ["ch-develop", "How we develop now"],
+  ["ch-validation", "Gate 1: Validation"],
+  ["ch-review", "Gate 2: Review & approval"],
+  ["ch-culture", "A culture of AI transformation"],
+  ["ch-receipts", "The receipts"],
+];
+const tocOl = document.querySelector("#toc ol");
+TOC.forEach(([id, label], i) => {
+  const a = document.createElement("a");
+  a.href = "#" + id;
+  a.innerHTML = `<span class="n">${String(i + 1).padStart(2, "0")}</span><span>${label}</span>`;
+  a.addEventListener("click", e => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); });
+  const li = document.createElement("li"); li.appendChild(a); tocOl.appendChild(li);
+});
+const tocLinks = new Map([...document.querySelectorAll("#toc a")].map(a => [a.getAttribute("href").slice(1), a]));
+{
+  const spy = new IntersectionObserver(es => {
+    es.forEach(e => {
+      if (!e.isIntersecting) return;
+      tocLinks.forEach(a => a.classList.remove("active"));
+      tocLinks.get(e.target.id)?.classList.add("active");
+    });
+  }, { rootMargin: "-45% 0px -45% 0px", threshold: 0 });
+  document.querySelectorAll("section.chapter").forEach(c => spy.observe(c));
+}
 
 // scroll progress rail
 const prog = document.getElementById("progress");
@@ -580,14 +604,6 @@ addEventListener("scroll", () => {
   const h = document.documentElement.scrollHeight - innerHeight;
   prog.style.width = (h > 0 ? (scrollY / h) * 100 : 0) + "%";
 }, { passive: true });
-
-// ↓ / space begins the story from the hero
-addEventListener("keydown", e => {
-  if ((e.key === "ArrowDown" || e.key === " ") && scrollY < innerHeight * 0.5) {
-    e.preventDefault();
-    document.getElementById("story").scrollIntoView({ behavior: "smooth" });
-  }
-});
 
 // background music — autoplay-with-sound is blocked until a user gesture,
 // so we start on the first interaction (unless the user has opted out) and

@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speedrunning Software — Amplitude EPD × AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Dark Precision — one accent, dark surfaces, hairlines not shadows */
+    --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Berkeley Mono", Menlo, monospace;
+
+    --primary: #5e6ad2;
+    --primary-hover: #828fff;
+
+    --ink: #f7f8f8;         /* headings, emphasis */
+    --ink-muted: #d0d6e0;   /* body prose */
+    --ink-subtle: #8a8f98;  /* captions, labels */
+    --ink-tertiary: #62666d;/* metadata */
+
+    --canvas: #08090a;
+    --surface-1: #0f1011;
+    --surface-2: #141516;
+    --hairline: #23252a;
+    --hairline-strong: #34343a;
+
+    --radius-button: 6px;
+    --radius-card: 12px;
+    --space-section: 96px;
+
+    /* legacy aliases still referenced below */
+    --bg: var(--canvas);
+    --sans: var(--font-sans);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--canvas);
+    color: var(--ink-muted);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv01", "ss03";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  #progress { position: fixed; top: 0; left: 0; height: 2px; background: var(--primary); width: 0; z-index: 60; }
+
+  /* ============================ LANDING (selector) ============================ */
+  #landing {
+    position: fixed; inset: 0; z-index: 50;
+    background: var(--canvas);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    transition: opacity 0.45s ease;
+  }
+  body:not(.mode-landing) #landing { opacity: 0; pointer-events: none; }
+  body.mode-landing { overflow: hidden; }
+  /* Unicorn Studio WebGL backdrop — hidden until the game button is hovered */
+  #us-bg { position: absolute; inset: 0; z-index: 0; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+  #us-bg canvas { display: block; width: 100% !important; height: 100% !important; }
+  #landing.us-active #us-bg { opacity: 1; }
+  .l-frame { position: absolute; inset: 18px; border: 0.5px solid var(--hairline-strong); pointer-events: none; z-index: 1; }
+  .l-title { position: relative; z-index: 2; padding: 0 clamp(20px, 5vw, 64px); }
+  .l-title canvas { display: block; margin: 0 auto; height: auto; }
+  .l-title canvas.speedrunning { width: min(86vw, 1000px); }
+  .l-title canvas.software { width: min(60vw, 700px); margin-top: 1vw; }
+  .l-by { position: relative; z-index: 2; margin-top: 30px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-subtle); }
+  .l-choices { position: relative; z-index: 2; margin-top: 40px; display: inline-flex; border: 0.5px solid var(--hairline-strong); border-radius: var(--radius-button); overflow: hidden; }
+  .l-choices button {
+    font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em;
+    padding: 13px 22px; border: 0; background: transparent; color: var(--ink-muted);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 9px;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .l-choices button + button { border-left: 0.5px solid var(--hairline-strong); }
+  .l-choices button.primary { background: #3B82F6; color: #fff; }
+  .l-choices button.primary:hover { background: #2f74e6; }
+  .l-choices button:not(.primary):hover { background: var(--surface-2); color: var(--ink); }
+  .l-choices .ic { font-size: 13px; opacity: 0.9; }
+  /* legibility over the backdrop: brighten the subtitle + secondary button and
+     add a scrim/shadow only while the game button is hovered (us-active) */
+  #landing.us-active .l-by { color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8); }
+  #landing.us-active .l-choices { border-color: rgba(255, 255, 255, 0.55); }
+  #landing.us-active .l-choices button:not(.primary) { color: #fff; background: rgba(8, 9, 10, 0.55); }
+
+  /* persistent mode toggle (after entering) */
+  #mode-toggle { position: fixed; top: 18px; right: 24px; z-index: 61; display: none; align-items: center; }
+  body.mode-article #mode-toggle { display: inline-flex; }
+  #mode-toggle button { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; padding: 8px 10px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: var(--radius-button); transition: color 0.15s ease; }
+  #mode-toggle button:hover { color: var(--ink-muted); }
+  #mode-toggle button.active { color: var(--ink); }
+  #mode-toggle .sep { color: var(--ink-tertiary); padding: 0 2px; }
+
+  #music-toggle {
+    position: fixed;
+    top: 20px; left: 28px;
+    z-index: 61;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 6px;
+    border: 0; background: transparent;
+    color: var(--ink-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  #music-toggle svg { display: block; width: 16px; height: 16px; }
+  #music-toggle .ic-muted { display: none; }
+  #music-toggle.muted .ic-on { display: none; }
+  #music-toggle.muted .ic-muted { display: block; }
+  #music-toggle:hover { color: var(--ink); }
+
+  /* ============================ STORY (split) ============================ */
+  :root { --stage-w: 42vw; }
+  .split { display: flex; align-items: flex-start; border-top: 0.5px solid var(--hairline); }
+
+  .editorial {
+    flex: 1 1 auto;
+    width: calc(100vw - var(--stage-w));
+    padding: 0 clamp(28px, 6vw, 96px);
+    border-right: 0.5px solid var(--hairline);
+  }
+  .reading { max-width: 560px; margin: 0 auto; padding: 12vh 0 22vh; }
+
+  /* article masthead — only shown on tablet/mobile (no selector there) */
+  .masthead { display: none; padding: 6vh 0 0; margin-bottom: 8px; }
+  .mh-title canvas { display: block; width: 100%; height: auto; }
+  .mh-title canvas.software { width: 72%; margin-top: 2.5vw; }
+  .masthead .dek { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.03em; color: var(--ink-subtle); margin-top: 20px; }
+
+  /* ── reading modes ── */
+  #toc { display: none; }
+  body.mode-article .split { display: block; }
+  body.mode-article .stage { display: none; }
+  body.mode-article .editorial { width: 100%; border-right: 0; padding: 0 24px; }
+  body.mode-article .reading { max-width: 680px; }
+  body.mode-article #toc {
+    display: block; position: fixed; left: max(32px, calc(50vw - 640px)); top: 132px;
+    width: 190px; z-index: 40;
+  }
+  #toc .toc-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-tertiary); margin-bottom: 14px; }
+  #toc ol { list-style: none; }
+  #toc a { display: flex; gap: 10px; padding: 7px 0 7px 12px; font-family: var(--font-mono); font-size: 12px; line-height: 1.35; color: var(--ink-tertiary); text-decoration: none; border-left: 1px solid var(--hairline); transition: color 0.15s ease, border-color 0.15s ease; }
+  #toc a:hover { color: var(--ink-muted); }
+  #toc a.active { color: var(--ink); border-left-color: var(--primary); }
+  #toc a .n { color: var(--ink-tertiary); }
+  @media (max-width: 1120px) { body.mode-article #toc { display: none; } }
+
+  /* eyebrow — taxonomy label, positive tracking, no colored bar */
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: 12px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-tertiary); margin-bottom: 16px;
+  }
+
+  h2.title {
+    font-size: clamp(28px, 3vw, 40px);
+    font-variation-settings: "wght" 600;
+    line-height: 1.15;
+    letter-spacing: -0.022em;
+    color: var(--ink);
+    margin-bottom: 24px;
+  }
+  /* inline accent words now render as plain prose (no pixel, no color shift) */
+  h2.title .px { font: inherit; color: inherit; letter-spacing: inherit; }
+
+  /* hover-definition tooltip — kept for defined terms only, restrained */
+  .tip, .px[data-tip] { position: relative; cursor: help; border-bottom: 1px dashed var(--hairline-strong); }
+  .tip::after, .px[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; left: 0; bottom: calc(100% + 10px);
+    width: max-content; max-width: 280px;
+    padding: 10px 12px;
+    background: var(--surface-2); border: 0.5px solid var(--hairline-strong); border-radius: 8px;
+    font-family: var(--font-sans);
+    font-size: 13px; font-weight: 400; line-height: 1.4; letter-spacing: 0; color: var(--ink-muted);
+    opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity 0.16s ease, transform 0.16s ease;
+    z-index: 20;
+  }
+  .tip:hover::after, .px[data-tip]:hover::after { opacity: 1; transform: translateY(0); }
+
+  .editorial p { font-size: 18px; font-weight: 400; line-height: 1.6; letter-spacing: -0.01em; color: var(--ink-muted); margin-bottom: 20px; }
+  .editorial p strong { color: var(--ink); font-variation-settings: "wght" 590; }
+  .editorial em { font-style: italic; color: var(--ink-muted); }
+  .editorial a { color: var(--primary); text-decoration: none; }
+  .editorial a:hover { color: var(--primary-hover); }
+  .editorial ul.prose-list { list-style: none; margin: 0 0 20px; padding: 0; }
+  .editorial ul.prose-list > li { position: relative; padding-left: 22px; margin-bottom: 14px; font-size: 18px; line-height: 1.6; color: var(--ink-muted); }
+  .editorial ul.prose-list > li::before { content: ""; position: absolute; left: 4px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-tertiary); }
+  .editorial ul.prose-list > li strong { color: var(--ink); font-variation-settings: "wght" 590; }
+  code { font-family: var(--font-mono); font-size: 0.88em; color: var(--ink-muted); }
+
+  details.toolchain { margin: 12px 0 0; }
+  details.toolchain summary { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em; color: var(--primary); cursor: pointer; list-style: none; }
+  details.toolchain summary::-webkit-details-marker { display: none; }
+  details.toolchain summary::after { content: " ▾"; color: var(--ink-tertiary); }
+  details.toolchain[open] summary::after { content: " ▴"; }
+  details.toolchain ul { list-style: none; margin: 14px 0 0; padding: 16px 18px; background: var(--surface-2); border: 0.5px solid var(--hairline); border-radius: var(--radius-button); }
+  details.toolchain li { font-family: var(--font-mono); font-size: 13px; line-height: 1.9; color: var(--ink-subtle); }
+  details.toolchain li code { color: var(--ink); }
+
+  section.chapter { padding-top: var(--space-section); scroll-margin-top: 8vh; }
+  section.chapter:first-of-type { padding-top: 12vh; }
+
+  .pull { border-left: 2px solid var(--hairline-strong); padding: 4px 0 4px 24px; margin: 40px 0; }
+  .pull q { font-size: clamp(21px, 2.4vw, 26px); font-variation-settings: "wght" 400; line-height: 1.35; color: var(--ink); font-style: normal; quotes: none; letter-spacing: -0.01em; }
+  .pull .cite { display: block; margin-top: 16px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; color: var(--ink-tertiary); text-transform: uppercase; }
+
+  /* stat callouts — surface cards, hairline separation, monochrome */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 0.5px; background: var(--hairline); border: 0.5px solid var(--hairline); border-radius: var(--radius-card); overflow: hidden; margin: 32px 0; }
+  .stat { background: var(--surface-1); padding: 22px 20px; }
+  .stat .big { font-size: 26px; font-variation-settings: "wght" 600; color: var(--ink); letter-spacing: -0.02em; }
+  .stat .lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 10px; line-height: 1.5; }
+  .stat .was { color: var(--ink-tertiary); text-decoration: line-through; }
+  .stat .delta { color: var(--ink-subtle); }
+
+  /* receipts — 3× hero stat + grid, restrained */
+  .receipts-hero { text-align: center; padding: 44px 20px 36px; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); margin: 32px 0 0.5px; }
+  .receipts-hero .big { font-size: clamp(64px, 9vw, 104px); font-variation-settings: "wght" 600; color: var(--ink); line-height: 0.95; letter-spacing: -0.03em; }
+  .receipts-hero .lab { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 14px; }
+  .stats.receipts-grid { grid-template-columns: repeat(2, 1fr); margin: 0.5px 0 28px; border-radius: 0 0 var(--radius-card) var(--radius-card); }
+
+  /* sub-sections — flow in the column like a blog; no sidebar (that's for pull quotes only) */
+  .block { margin: 40px 0; }
+  .block h3 { font-size: 20px; font-variation-settings: "wght" 510; color: var(--ink); margin-bottom: 12px; letter-spacing: -0.01em; }
+
+  /* diagram frame — neutral surface (particle motif is rebuilt in P3) */
+  .diagram { margin: 40px 0; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); padding: 24px; }
+  .diagram .dlabel { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: 16px; }
+  .flowviz { display: block; width: 100%; height: 152px; }
+  .plegend { font-size: 13px; color: var(--ink-subtle); margin-top: 16px; line-height: 1.6; }
+
+  .stage {
+    flex: 0 0 var(--stage-w);
+    width: var(--stage-w);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    background: #05060c;
+    overflow: hidden;
+  }
+  .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .stage .stage-tag {
+    position: absolute; top: 14px; left: 14px; z-index: 5;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-subtle);
+    background: rgba(5,6,12,0.6); border: 0.5px solid var(--hairline); padding: 5px 9px; border-radius: 5px;
+    pointer-events: none;
+  }
+
+  /* Tablet & mobile: article only (no selector, no game), with a title masthead */
+  @media (max-width: 1024px) {
+    #landing, #mode-toggle, .stage { display: none !important; }
+    .split { display: block !important; }
+    .editorial { width: 100% !important; border-right: 0 !important; padding: 0 20px !important; }
+    .reading { max-width: 680px !important; }
+    #toc { display: none !important; }
+    body { overflow: auto !important; }
+    .masthead { display: block; }
+    section.chapter:first-of-type { padding-top: 28px; }
+  }
+</style>
+</head>
+<body class="mode-landing">
+
+<div id="progress"></div>
+<button id="music-toggle" title="Toggle music" aria-label="Toggle music">
+  <svg class="ic-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+  </svg>
+  <svg class="ic-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+    <line x1="14" y1="4" x2="1" y2="20"></line>
+  </svg>
+  <span class="label">MUSIC</span>
+</button>
+<audio id="bgm" loop autoplay preload="auto"><source src="../assets/music.mp3" type="audio/mpeg"></audio>
+
+<!-- ============================ LANDING (selector) ============================ -->
+<div id="landing">
+  <div id="us-bg" data-us-project="b4EHpFNwCbx7EAyviXBM"></div>
+  <div class="l-frame"></div>
+  <div class="l-title">
+    <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
+    <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
+  </div>
+  <div class="l-by">How Amplitude EPD 3&times;&rsquo;d PRs in 6 months</div>
+  <div class="l-choices">
+    <button data-mode="game" class="primary"><span class="ic">&#9654;</span> Read &amp; play game</button>
+    <button data-mode="article"><span class="ic">&para;</span> Read as article</button>
+  </div>
+</div>
+
+<!-- persistent mode toggle -->
+<div id="mode-toggle">
+  <button data-mode="game">Read &amp; play game</button>
+  <span class="sep">/</span>
+  <button data-mode="article">Read as article</button>
+</div>
+
+<!-- floating table of contents (article mode) -->
+<nav id="toc" aria-label="Contents"><div class="toc-label">Contents</div><ol></ol></nav>
+
+<!-- ============================ STORY ============================ -->
+<div class="split" id="story">
+  <main class="editorial">
+    <div class="reading">
+
+      <header class="masthead">
+        <div class="mh-title">
+          <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
+          <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
+        </div>
+        <p class="dek">How Amplitude EPD 3&times;&rsquo;d PRs in 6 months</p>
+      </header>
+
+      <section class="chapter" id="ch-intro">
+        <h2 class="title">Have you ever tried to <span class="tip" data-tip="Completing a game as fast as possible, often condensing a game built for hours of playtime and finishing it in minutes.">speedrun</span> a video game?</h2>
+        <p>Most people think it takes superhuman reflexes. Do the same thing every time, just mechanically faster. It&rsquo;s not that simple. Speedrunners spend most of their time studying the route and engineering the system and environment to go faster each time.</p>
+        <p>Building our autonomous software factory feels the same. We wanted to see how fast we could get software into the hands of our customers.</p>
+        <p><strong>After 6 months, we&rsquo;ve 3x&rsquo;d our PRs.</strong></p>
+      </section>
+
+      <section class="chapter" id="ch-why">
+        <h2 class="title">Why does speed matter, really?</h2>
+        <div class="pull">
+          <q>AI has made building cheap. Knowing what to build and how it works is the new game.</q>
+          <span class="cite">&mdash; Wade Chambers, Chief Engineering Officer, Amplitude</span>
+        </div>
+        <p>Once the software factory gets fast, any idea becomes possible and the real judgment is in knowing which ones are worth trying. You can build the smallest version, put it out there, see if it moved your guiding metric, then do it all over again. The goal is to run smaller experiments and see good ideas surface much faster. With the same headcount, that&rsquo;s how you out-iterate everyone else.</p>
+        <p>By speeding up our software factory, we&rsquo;re moving engineers from <em>in</em> the software loop, doing every step, to <em>on</em> the loop, steering it.</p>
+      </section>
+
+      <section class="chapter" id="ch-gates">
+        <h2 class="title">The gates slowing us down</h2>
+        <p>Think of software development as a pipeline. An idea becomes code, the code gets validated and reviewed, and then it gets deployed to production. That path is the same whether the change is a one-line bug fix, a new feature release, or a sweeping migration across the codebase. Simple enough. But for us, it slowed down at a few specific steps.</p>
+        <div class="diagram" data-diagram="pipeline">
+          <div class="dlabel">The pipeline &middot; Idea &rarr; Code &rarr; Validation &rarr; Review &rarr; Production</div>
+          <canvas class="flowviz" data-flow="constrained" aria-label="Changes flowing through the delivery pipeline, bunching up at the manual gates"></canvas>
+        </div>
+        <p>Before we made a bet on our software factory, most steps in the pipeline were manual. Engineers worked in local environments they had to assemble themselves. Setting one up meant figuring out which dependencies (and the dependencies of dependencies) were needed for testing, then spinning them up. The local frontend alone could take up to 3 minutes to start, and CI runs could stretch beyond 30 minutes. On a bad day, an engineer could lose most of their time just setting up and shipping a single change.</p>
+        <p>Despite its flaws, this design worked for years because writing code was the slowest part of the system. It was a natural limitation on how many changes could enter the pipeline at once. But agents changed that. Faster code generation meant that a trickle of PRs suddenly became a flood, and the manual validating, reviewing, and approval became the stoppage points.</p>
+        <p>This is the <strong>Theory of Constraints</strong>, the idea that every system has one main bottleneck that limits how fast the whole thing can move. Speeding up one part of the system moves the goal post to the next-slowest step. What a beautifully messy problem to solve! We were up for the challenge.</p>
+        <p>For us, the heaviest gates to push through were the ones that stayed largely manual: validation, review, and approval.</p>
+      </section>
+
+      <section class="chapter" id="ch-foundations">
+        <h2 class="title">Rebuilding the foundations</h2>
+        <p>When Stripe built their coding agent, they found something interesting: What&rsquo;s good for agents is good for humans, too. We agree.</p>
+        <p>But we hadn&rsquo;t made it a priority. For years, we optimized for <em>what</em> we shipped, but agents forced us to finally fix <em>how</em> we ship. Brightside? They also helped us improve much faster than expected.</p>
+        <div class="stats">
+          <div class="stat"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
+          <div class="stat"><div class="big">40 min &rarr; 15 min</div><div class="lab">Backend CI &middot; <span class="delta">2&ndash;3&times; faster</span></div></div>
+          <div class="stat"><div class="big">3 min &rarr; 28 sec</div><div class="lab">Local app start &middot; <span class="delta">~6&times; faster</span></div></div>
+          <div class="stat"><div class="big">1&ndash;4 days &rarr; 10&ndash;15 min</div><div class="lab">Week 0 setup</div></div>
+        </div>
+        <div class="block">
+          <h3>One containerized environment</h3>
+          <p>Local setups used to be app-specific. To run the full stack, you had to configure your machine properly across several of them and keep 5+ processes running. Local setup was often unstable and could break with new updates. The first-time setup could take between one to four days and help from multiple colleagues. Now you can run two commands and be set up in 10&ndash;15 minutes. Day to day, you can run one command and have the fullstack app running in around 30 seconds.</p>
+        </div>
+        <div class="block">
+          <h3>CI from 30 minutes to under 5</h3>
+          <p>Our frontend CI had been creeping up for years and began approaching 30 minutes. We tackled it in three ways:</p>
+          <ul class="prose-list">
+            <li><strong>Build only what changed.</strong> We leaned into our Turborepo monorepo setup with affected-based builds, so CI only touches the packages a change actually impacts rather than rebuilding everything. We also compiled packages so their outputs could be cached and reused, and paired that with TypeScript isolated declarations so type info emits per-package without cross-package dependencies. Together, this gave us more cache hits, more parallelism, and fewer redundant rebuilds.</li>
+            <li><strong>Trade JavaScript tooling for Rust and Go.</strong> The single biggest lever was replacing our JS-based toolchain with native equivalents. Nearly every tool got roughly an order of magnitude faster.
+              <details class="toolchain">
+                <summary>See the full toolchain</summary>
+                <ul>
+                  <li>TypeScript type checking: <code>tsc &rarr; tsgo</code> (~10&times; faster)</li>
+                  <li>Linting: <code>ESLint &rarr; oxlint</code> (~10&times; faster)</li>
+                  <li>Formatting: <code>Prettier &rarr; oxfmt</code> (~10&times; faster)</li>
+                  <li>Bundling libraries: <code>tsc builds &rarr; tsdown</code> (~10&times; faster)</li>
+                  <li>Bundling apps: <code>esbuild &rarr; rolldown</code> (~2&ndash;3&times; faster)</li>
+                  <li>Testing: <code>Jest &rarr; Vitest</code> + fixed flaky tests (~50% faster)</li>
+                </ul>
+              </details>
+            </li>
+            <li><strong>Parallelize the pipeline itself.</strong> We restructured the CI pipeline to run independent stages concurrently rather than in sequence, squeezing out the remaining wall-clock time that faster tools alone couldn&rsquo;t recover.</li>
+          </ul>
+          <p>A pipeline that once ran at 30 minutes now finishes at a fraction of that time, with most changes clearing CI before an engineer has finished writing their PR description.</p>
+        </div>
+        <div class="block">
+          <h3>Automated legacy migrations</h3>
+          <p>We pointed agents at the patterns that confused them most and let them run the migrations themselves. The largest migration was three competing design systems in one codebase: Ant Design, in-house Cerulean, and core-ui (Radix UI + CVA + Tailwind). We&rsquo;re deprecating the first two and standardizing on core-ui. We did the same with i18n, reducing three translation systems into one. Then we codified the changes as agent rules and skills that are backed by lint checks, so agents (and engineers) don&rsquo;t drift back into old patterns. These were migrations we&rsquo;d written off for years, but agents finally made them possible.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-develop">
+        <h2 class="title">How we develop now</h2>
+        <p>Improving our developer experience, or <span class="tip" data-tip="The tools, environments, processes, and workflows that shape how easily engineers can go from idea to shipped code.">DevEx</span>, changed how people code in expected and unexpected ways. DevEx is the whole path an engineer travels from idea to shipped: the tools, the environments, and every step in between. The obvious: Agents write a lot of code now. More surprising: Where that code gets written.</p>
+        <div class="block">
+          <h3>Agent-generated code</h3>
+          <p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor, Codex, and Claude Code agents. Nearly all frontend code and most backend code is now agent generated.</p>
+        </div>
+        <div class="block">
+          <h3>CI as our new dev environment</h3>
+          <p>Once frontend CI dropped to under 5 minutes, working locally was no longer the fast option. Engineers now push a branch, let CI run, and review it in GitHub. The CI went from the gate you clear after you build something to the new dev environment for most engineers.</p>
+          <p>This lets engineers parallelize their work. Because it runs in the cloud, they aren&rsquo;t limited to one change at a time. They can kick off 20 PRs before logging off and review them the next morning. The only limit is knowing what to build, which is why a migration might hit 100 PRs, while feature development stays around 1&ndash;3.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-validation">
+        <h2 class="title">Gate 1: Validation</h2>
+        <p>Validation is where we confirm a change does what it&rsquo;s supposed to do. Every change gets validated before it ships, but it was slow. Spinning up the test build used to take 25 minutes, which was long enough that you&rsquo;d start another task while you waited, then lose time and focus switching back and forth.</p>
+        <p>So we made it faster. Automated checks handle most of it, but some things you only catch by trying the change yourself. For that, you can ship a PR and get a working preview in a couple of minutes with no local setup.</p>
+        <div class="diagram" data-diagram="gate-validation">
+          <div class="dlabel">Unlocking the Validation gate</div>
+          <canvas class="flowviz" data-flow="open-validate" aria-label="The Validation gate opens and changes stop piling up behind it"></canvas>
+        </div>
+        <div class="block">
+          <h3>Frontend previews</h3>
+          <p>For a frontend change, the built assets go up to S3 and load as a working copy of the app. It comes with dev tools to flip feature flags and settings, and a deep verification link straight to the page your change affects. Checking a change takes 2&ndash;5 minutes of click-through with no local setup needed.</p>
+        </div>
+        <div class="block">
+          <h3>Backend ephemerals</h3>
+          <p>Backend changes get validated through ephemerals. Add a tag to a PR and it spins up a throwaway copy of the full stack, where an engineer or an agent can hit the APIs or run the feature end to end before it merges. It takes 10 to 15 minutes to spin up.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-review">
+        <h2 class="title">Gate 2: Review and approval</h2>
+        <p>Engineers used to spend a big part of their day reviewing other people&rsquo;s changes, or waiting on someone to review theirs. Across the team, review was one of the slowest steps in the pipeline.</p>
+        <p>We changed that by raising our confidence in the code before it reaches review. Stronger linting rules and a design system that handles most of the complexity now cover a lot of what a reviewer used to check by hand. On top of that, an automated reviewer runs on every PR, and a risk model approves the low-risk changes on its own.</p>
+        <p><strong>The average PR is now approved and merged 4.5x faster.</strong></p>
+        <div class="stats"><div class="stat"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div></div>
+        <div class="diagram" data-diagram="gate-review">
+          <div class="dlabel">Unlocking the Review gate</div>
+          <canvas class="flowviz" data-flow="open-review" aria-label="Low-risk changes flow straight through as the Review and approval gates open"></canvas>
+        </div>
+        <div class="block">
+          <h3>Automated code review</h3>
+          <p>We use Cursor&rsquo;s Bugbot on every PR in CI. It comes out of the box, and we add context when it misses things. So far, it catches bugs that most humans used to let through. Even though we&rsquo;ve tripled the PRs we ship, bug reports have fallen by more than half (from 715 a month to 319), and high-priority issue reports have also dropped. More code hasn&rsquo;t meant worse code, and Bugbot is a large reason why.</p>
+        </div>
+        <div class="block">
+          <h3>Risk-based auto-approval</h3>
+          <p>We introduced a risk model that scores each change on size, scope, what part of the codebase it touches, test coverage, and whether it modifies public APIs or data models. If a change is low-risk and review comments are resolved, it merges on its own without a human in the loop. When someone catches a change that shouldn&rsquo;t have merged, it goes into an eval suite, and we tune the risk model so it doesn&rsquo;t happen again.</p>
+        </div>
+        <div class="block">
+          <h3>SOC2 compliance</h3>
+          <p>How does auto-approval pass a SOC2 audit? Turns out, SOC2 doesn&rsquo;t need a human to click approve. What it does need is demonstrable controls: documented criteria, logged decisions, and a way to override. So we documented all of it, including what qualifies for auto-approval, what still needs a human, and how someone escalates. Approval and validation are separately logged signals, so every decision can be audited after the fact. We brought compliance in early so we didn&rsquo;t have to redesign it later.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-culture">
+        <h2 class="title">A culture of AI transformation</h2>
+        <p>We improved our automated systems and tooling and got far, fast. But the harder part was creating the culture to get there.</p>
+        <p>Wade Chambers, Amplitude&rsquo;s chief engineering officer, describes engineers as craftspeople who built their careers on figuring out clean abstractions, reusable interfaces, and code that others can build on. The idea that an agent can do that just as well isn&rsquo;t easy to hear. Getting past it to reach broader adoption took two waves: AI fluency (moving from chat-based questions to goal-oriented tasks), and then using that fluency to disrupt entire workflows.</p>
+        <p>We put a lot of thought into getting both right, and we still had a few hiccups along the way.</p>
+        <div class="pull"><q>AI progression is largely not a technical issue. It&rsquo;s a cultural one.</q><span class="cite">&mdash; Wade Chambers, Chief Engineering Officer, Amplitude</span></div>
+        <div class="block">
+          <h3>Start with the leaders</h3>
+          <p>Leader ambition can be one of the biggest drags on organizational velocity. You can&rsquo;t ask engineers to hand their work to an agent if their own leaders won&rsquo;t. So we made them go first, literally. Amplitude&rsquo;s chief engineering officer asked senior leaders to vibe code in front of the entire EPD org. Leaders experienced the highs and lows of agentic building (and breaking) live on stage. They then took that live-coding exercise back to their own teams to repeat it. This made it feel like leaders were co-developing with their teams, rather than simply talking at them.</p>
+        </div>
+        <div class="block">
+          <h3>Let anyone ship</h3>
+          <div class="stats"><div class="stat"><div class="big">~5%</div><div class="lab">Non-engineer PRs</div></div></div>
+          <p>The biggest positive was handing over the keys to the kingdom and letting non-engineers ship code. Designers, PMs, and even marketers use Claude and Cursor to fix bugs and make frontend improvements.</p>
+          <p>The best part is that they happen much faster because there&rsquo;s no more handoff to eng. And the fixes are often better because the person closest to the problem makes the fix. Jingshu Zhao, Principal Designer at Amplitude, started with a small PR for a button-alignment issue. Soon after, she used Claude Code to reorganize our navigation and sunset low-usage sections.</p>
+          <p>Although non-engineers only make up 5% of our PRs right now, they&rsquo;re high-value changes, and that number continues to grow.</p>
+          <p>Getting non-engineers to code was only possible with the validation and review changes we made to our software factory. Preview links let them check a change without running anything locally, and each PR deep-links to the exact page that changed, so verification is only a short click-through.</p>
+          <p>Our advice for getting non-engineers on board is to make it wildly easy for them. That means strong documentation and training on things like first-time setup and choosing an environment. We also have an internal marketplace for shared skills that anyone can access.</p>
+        </div>
+        <div class="block">
+          <h3>Spend where it counts</h3>
+          <p>We don&rsquo;t cap what people spend on AI. If anything, we encourage more of it. But we&rsquo;ve also learned that the model you pick matters just as much as how you run it, so we pay attention to high bills and see whether a lighter model would work. A less expensive model lets you run two or three times as much with the same budget, so you aren&rsquo;t limited on how much you can justify doing. For example, our CTO recently refactored a major backend to have proper typings for only $500. He used a cheaper model and a well-planned script that was run locally. That same work could have easily cost tens of thousands of dollars. So our guidance is to not feel constrained by tokens, but also to choose the right model for the job.</p>
+        </div>
+        <div class="block">
+          <h3>It&rsquo;s never perfect</h3>
+          <p>We made some mistakes early on. The first was spreading the effort too thinly across the org (the peanut butter approach). We eventually shifted to a tiger team model and embedded AI-pilled engineers across teams to share their knowledge.</p>
+          <p>Another mistake was trying to bite off more than we could chew and build agents before we had any of the infrastructure in place. But there was no need for us to jump to the end. Prioritizing our foundational DevEx is what ultimately helped us move faster.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-receipts">
+        <h2 class="title">The receipts</h2>
+        <div class="receipts-hero">
+          <div class="big">3&times;</div>
+          <div class="lab">more PRs shipped</div>
+        </div>
+        <div class="stats receipts-grid">
+          <div class="stat"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
+          <div class="stat"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div>
+          <div class="stat"><div class="big">715 &rarr; 319</div><div class="lab">Bug reports &middot; <span class="delta">&darr; 50%</span></div></div>
+          <div class="stat"><div class="big">~5%</div><div class="lab">PRs from non-engineers</div></div>
+        </div>
+        <p>Now that building is cheap, the game is knowing what to build and shipping it first. That&rsquo;s the real speedrun.</p>
+      </section>
+    </div>
+  </main>
+
+  <aside class="stage">
+    <iframe src="game.html" title="Data Monster side-scroller" scrolling="no"></iframe>
+  </aside>
+</div>
+
+<script>
+/* ============================================================
+   DOT-MATRIX PIXEL TEXT — reproduces "Geist Pixel" Circle/Triangle:
+   rasterize the word in a heavy sans, grid-sample, then stamp a shape
+   per "on" cell. computeDots() returns the target positions so the hero
+   can animate them in from random spots; inline accents render static.
+   ============================================================ */
+function computeDots(text, { shape = "circle", fontSize = 200, weight = 800, cell = 8, dotScale = 0.42, tracking = -0.04 } = {}) {
+  const off = document.createElement("canvas");
+  const octx = off.getContext("2d");
+  const font = `${weight} ${fontSize}px "SF Pro Display", "Arial", "Inter", sans-serif`;
+  octx.font = font;
+  if ("letterSpacing" in octx) octx.letterSpacing = `${tracking * fontSize}px`;
+  const m = octx.measureText(text);
+  const asc = m.actualBoundingBoxAscent || fontSize * 0.72;
+  const desc = m.actualBoundingBoxDescent || fontSize * 0.28;
+  const w = Math.ceil(m.width) + 4, h = Math.ceil(asc + desc) + 4;
+  off.width = w; off.height = h;
+  octx.font = font;
+  if ("letterSpacing" in octx) octx.letterSpacing = `${tracking * fontSize}px`;
+  octx.textBaseline = "alphabetic";
+  octx.fillStyle = "#fff";
+  octx.fillText(text, 2, asc + 2);
+  const src = octx.getImageData(0, 0, w, h).data;
+  const cols = Math.floor(w / cell), rows = Math.floor(h / cell);
+  const dots = [];
+  for (let gy = 0; gy < rows; gy++) for (let gx = 0; gx < cols; gx++) {
+    const sx = Math.floor(gx * cell + cell / 2), sy = Math.floor(gy * cell + cell / 2);
+    if (src[(sy * w + sx) * 4 + 3] > 128) dots.push({ x: gx * cell + cell / 2, y: gy * cell + cell / 2 });
+  }
+  return { dots, w: cols * cell, h: rows * cell, r: cell * dotScale, shape };
+}
+function stamp(ctx, x, y, r, shape) {
+  ctx.beginPath();
+  if (shape === "triangle") { ctx.moveTo(x, y - r); ctx.lineTo(x + r, y + r * 0.85); ctx.lineTo(x - r, y + r * 0.85); ctx.closePath(); }
+  else ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+function sizeCanvas(c, w, h) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return ctx;
+}
+
+// pixel title — dots assemble from random positions, then keep a subtle
+// twinkle where random dots dip to a darker blue on a staggered ~1200ms cycle.
+const TITLE_BASE = [59, 130, 246], TITLE_DARK = [23, 48, 184], TITLE_WHITE = [255, 255, 255];
+function lerp3(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+
+// white-on-hover of the "Read & play game" button — eased ~200ms to match the
+// backdrop fade. Deterministic from (from,to,t0) so both title canvases stay in sync.
+let wFrom = 0, wTo = 0, wT0 = -1e9;
+function titleWhiteAt(now) {
+  const p = Math.min(1, Math.max(0, (now - wT0) / 200));
+  const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;   // easeInOutQuad
+  return wFrom + (wTo - wFrom) * e;
+}
+function setTitleWhite(on) {
+  const now = performance.now();
+  wFrom = titleWhiteAt(now); wTo = on ? 1 : 0; wT0 = now;
+}
+function renderPixelTitle(c, idx) {
+  const g = computeDots(c.dataset.pixel, { shape: c.dataset.shape, fontSize: 220, cell: 9 });
+  const ctx = sizeCanvas(c, g.w, g.h);
+  const DUR = 520, SPREAD = 650;
+  g.dots.forEach(d => {
+    const a = Math.random() * Math.PI * 2, dist = 30 + Math.random() * 140;
+    d.sx = d.x + Math.cos(a) * dist; d.sy = d.y + Math.sin(a) * dist;
+    d.delay = (idx % 2) * 220 + Math.random() * SPREAD;
+    d.phase = Math.random() * Math.PI * 2;   // per-dot twinkle offset
+  });
+  (function frame(now) {
+    const t = now - (frame.t0 || (frame.t0 = now));
+    ctx.clearRect(0, 0, g.w, g.h);
+    for (const d of g.dots) {
+      let p = (t - d.delay) / DUR;
+      p = p < 0 ? 0 : p > 1 ? 1 : p;
+      const e = 1 - Math.pow(1 - p, 3);
+      // twinkle: dip toward the darker blue near each dot's staggered peak,
+      // then blend the whole title toward white while the game button is hovered
+      const white = titleWhiteAt(now);
+      const k = 0.5 + 0.5 * Math.sin((now / 1200) * Math.PI * 2 + d.phase);
+      const dark = white < 1 && k > 0.86 ? (k - 0.86) / 0.14 : 0;
+      const col = lerp3(lerp3(TITLE_BASE, TITLE_DARK, dark), TITLE_WHITE, white);
+      ctx.fillStyle = `rgb(${col[0] | 0},${col[1] | 0},${col[2] | 0})`;
+      ctx.globalAlpha = e;
+      stamp(ctx, d.sx + (d.x - d.sx) * e, d.sy + (d.y - d.sy) * e, g.r * (0.35 + 0.65 * e), g.shape);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);   // keep running for the twinkle
+  })(performance.now());
+}
+document.querySelectorAll(".l-title canvas, .mh-title canvas").forEach(renderPixelTitle);
+
+// ── Reading-mode selector (landing → article | game), with a persistent toggle ──
+const isSmall = () => matchMedia("(max-width: 1024px)").matches;
+function setMode(mode) {
+  document.body.classList.remove("mode-landing", "mode-article", "mode-game");
+  document.body.classList.add("mode-" + mode);
+  document.querySelectorAll("#mode-toggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.mode === mode));
+  if (mode !== "landing") scrollTo(0, 0);
+}
+document.querySelectorAll("#landing .l-choices button, #mode-toggle button").forEach(b =>
+  b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+// hovering "Read & play game" fades in the Unicorn Studio backdrop and turns
+// the pixel title white — both only while hovering that button.
+const landing = document.getElementById("landing");
+const gameBtn = document.querySelector('#landing .l-choices button[data-mode="game"]');
+if (gameBtn) {
+  const on = () => { landing.classList.add("us-active"); setTitleWhite(true); };
+  const off = () => { landing.classList.remove("us-active"); setTitleWhite(false); };
+  gameBtn.addEventListener("pointerenter", on);
+  gameBtn.addEventListener("pointerleave", off);
+  gameBtn.addEventListener("focus", on);
+  gameBtn.addEventListener("blur", off);
+}
+// always start at the selector — a refresh returns here (like the reference site);
+// tablet/mobile have no selector or game, so they open straight into the article.
+setMode(isSmall() ? "article" : "landing");
+
+// ── Table of contents (article mode) — built from the chapters, with scrollspy ──
+const TOC = [
+  ["ch-intro", "Introduction"],
+  ["ch-why", "Why speed matters"],
+  ["ch-gates", "The gates"],
+  ["ch-foundations", "Rebuilding the foundations"],
+  ["ch-develop", "How we develop now"],
+  ["ch-validation", "Gate 1: Validation"],
+  ["ch-review", "Gate 2: Review & approval"],
+  ["ch-culture", "A culture of AI transformation"],
+  ["ch-receipts", "The receipts"],
+];
+const tocOl = document.querySelector("#toc ol");
+TOC.forEach(([id, label], i) => {
+  const a = document.createElement("a");
+  a.href = "#" + id;
+  a.innerHTML = `<span class="n">${String(i + 1).padStart(2, "0")}</span><span>${label}</span>`;
+  a.addEventListener("click", e => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); });
+  const li = document.createElement("li"); li.appendChild(a); tocOl.appendChild(li);
+});
+const tocLinks = new Map([...document.querySelectorAll("#toc a")].map(a => [a.getAttribute("href").slice(1), a]));
+{
+  const spy = new IntersectionObserver(es => {
+    es.forEach(e => {
+      if (!e.isIntersecting) return;
+      tocLinks.forEach(a => a.classList.remove("active"));
+      tocLinks.get(e.target.id)?.classList.add("active");
+    });
+  }, { rootMargin: "-45% 0px -45% 0px", threshold: 0 });
+  document.querySelectorAll("section.chapter").forEach(c => spy.observe(c));
+}
+
+// scroll progress rail
+const prog = document.getElementById("progress");
+addEventListener("scroll", () => {
+  const h = document.documentElement.scrollHeight - innerHeight;
+  prog.style.width = (h > 0 ? (scrollY / h) * 100 : 0) + "%";
+}, { passive: true });
+
+// background music — autoplay-with-sound is blocked until a user gesture,
+// so we start on the first interaction (unless the user has opted out) and
+// keep the toggle in sync.
+const bgm = document.getElementById("bgm");
+const mbtn = document.getElementById("music-toggle");
+bgm.volume = 0.45;
+let userPaused = false;
+function setLabel() {
+  const playing = !bgm.paused;
+  mbtn.classList.toggle("muted", !playing);   // swaps the speaker icon (on ↔ slashed)
+  mbtn.title = playing ? "Mute music" : "Unmute music";
+}
+function tryStart(e) {
+  if (e && mbtn.contains(e.target)) return; // let the button's own handler decide
+  if (userPaused || !bgm.paused) return;
+  bgm.play().then(setLabel).catch(() => {});
+}
+// attempt autoplay on load; browsers that block it fall back to first gesture
+bgm.play().then(setLabel).catch(() => setLabel());
+["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev =>
+  addEventListener(ev, tryStart, { passive: true }));
+mbtn.addEventListener("click", () => {
+  if (bgm.paused) { userPaused = false; bgm.play().catch(() => {}); }
+  else { userPaused = true; bgm.pause(); }
+  setLabel();
+});
+
+// The embedded game (game.html) is a v3-tailored copy: content cards removed,
+// simplified splash, minimap teleport hint — so no chrome injection needed here.
+
+// (Scroll-driven auto-teleport removed — the game stays on its title screen
+//  until the reader clicks into it, then plays it manually.)
+
+// ── Pipeline flow viz (SDLC hourglass) ──────────────────────────────────────
+// A horizontal ribbon of changes streams left→right through the pipeline. At a
+// locked gate the ribbon pinches to a neck and packets funnel + bunch up; when
+// a gate opens the neck widens and they stream straight through. Stage labels
+// light up in turn. Reused across the three diagrams via data-flow.
+const FLOW_STAGES = [
+  { label: "Idea" },
+  { label: "Code" },
+  { label: "Validation", gate: true, key: "validate" },
+  { label: "Review", gate: true, key: "review" },
+  { label: "Production" },
+];
+const FLOW_OPEN = {
+  "constrained":   [],
+  "open-validate": ["validate"],
+  "open-review":   ["validate", "review"],
+};
+const FLOW_C = {
+  edge: "rgba(138,143,152,0.24)",
+  ink: "#d0d6e0", dim: "#4a4e57", sub: "#8a8f98", green: "#3fb950",
+  parts: ["#6d7be8", "#4a90d9", "#3fb64f", "#d1a24a"],   // change types (data-viz palette)
+};
+
+function makeFlow(canvas, openKeys) {
+  const ctx = canvas.getContext("2d");
+  const stages = FLOW_STAGES.map((s, i) => ({ ...s, i, open: s.gate ? openKeys.includes(s.key) : true }));
+  const gates = stages.filter((s) => s.gate);
+  let W = 0, H = 0, cy = 0, RH = 0, nodeX = [], dpr = 1, particles = [], lastT = 0, spawnAcc = 0, running = false, t0 = 0;
+
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cy = Math.round(H * 0.40);
+    RH = Math.min(46, H * 0.32);
+    const padL = 32, padR = 32;
+    nodeX = stages.map((s, i) => padL + (W - padL - padR) * (i / (stages.length - 1)));
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+
+  const SIGMA = 32, NECK = 0.14;
+  function pinch(x) {                 // 0..1 influence of the nearest LOCKED gate
+    let m = 0;
+    for (const g of gates) { if (g.open) continue; const gx = nodeX[g.i]; m = Math.max(m, Math.exp(-((x - gx) ** 2) / (2 * SIGMA * SIGMA))); }
+    return m;
+  }
+  const halfH = (x) => RH * (1 - (1 - NECK) * pinch(x));
+  const baseV = () => W / 3.6;
+
+  function spawn() {
+    particles.push({ x: -6, lane: Math.random() * 2 - 1, col: FLOW_C.parts[(Math.random() * FLOW_C.parts.length) | 0], ph: Math.random() * 6.28, r: 2.1 + Math.random() * 1.3 });
+  }
+  function tick(now) {
+    if (!t0) t0 = now;
+    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0; lastT = now;
+    spawnAcc += dt;
+    while (spawnAcc > 0.09 && particles.length < 130) { spawnAcc -= 0.09; spawn(); }
+    for (const p of particles) {
+      const slow = 0.16 + 0.84 * (1 - pinch(p.x));    // crawl through a locked neck → bunch up
+      p.x += baseV() * slow * dt;
+    }
+    particles = particles.filter((p) => p.x < W + 6);
+    draw(now);
+  }
+  function step(now) { tick(now); if (running) requestAnimationFrame(step); }
+
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    const x0 = nodeX[0], x1 = nodeX[nodeX.length - 1];
+    // ribbon silhouette
+    ctx.strokeStyle = FLOW_C.edge; ctx.lineWidth = 1;
+    for (const sign of [-1, 1]) {
+      ctx.beginPath();
+      for (let x = x0; x <= x1; x += 4) {
+        const y = cy + sign * halfH(x);
+        x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // packets
+    for (const p of particles) {
+      const hh = halfH(p.x);
+      const y = cy + p.lane * hh + Math.sin(now / 500 + p.ph) * 1.1;
+      ctx.beginPath(); ctx.arc(p.x, y, p.r, 0, 6.2832);
+      ctx.fillStyle = p.col; ctx.globalAlpha = 0.92; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // gate posts
+    for (const g of gates) {
+      const x = nodeX[g.i], hh = halfH(x), col = g.open ? FLOW_C.green : FLOW_C.sub;
+      ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x, cy - hh - 9); ctx.lineTo(x, cy - hh - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, cy + hh + 2); ctx.lineTo(x, cy + hh + 9); ctx.stroke();
+    }
+    // stage labels — a playhead lights each up in turn
+    const active = Math.floor(((now - t0) / 1100) % stages.length);
+    ctx.textAlign = "center";
+    const labelY = cy + RH + 26;
+    for (const s of stages) {
+      const x = nodeX[s.i];
+      ctx.fillStyle = FLOW_C.dim; ctx.fillRect(x - 1.5, cy - 1.5, 3, 3);
+      let col = s.gate ? (s.open ? FLOW_C.green : FLOW_C.sub) : FLOW_C.dim;
+      if (s.i === active) col = FLOW_C.ink;
+      ctx.fillStyle = col;
+      ctx.font = (s.i === active ? "600 " : "") + "10px ui-monospace, SFMono-Regular, monospace";
+      ctx.fillText(s.label.toUpperCase(), x, labelY);
+    }
+  }
+
+  return {
+    start() { if (!running) { running = true; lastT = 0; requestAnimationFrame(step); } },
+    stop() { running = false; },
+    tick,   // exposed for deterministic frame-driving during testing
+  };
+}
+// instantiate each diagram; only animate while it's on screen
+document.querySelectorAll("canvas.flowviz").forEach((cv) => {
+  const openKeys = FLOW_OPEN[cv.dataset.flow] || [];
+  const viz = makeFlow(cv, openKeys);
+  const io = new IntersectionObserver((es) => {
+    es.forEach((e) => (e.isIntersecting ? viz.start() : viz.stop()));
+  }, { threshold: 0.15 });
+  io.observe(cv);
+});
+</script>
+
+<!-- Unicorn Studio SDK — loads once, then inits the #us-bg scene -->
+<script>!function(){var u=window.UnicornStudio;if(u&&u.init){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){u.init()})}else{u.init()}}else{window.UnicornStudio={isInitialized:!1};var i=document.createElement("script");i.src="https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.2.7/dist/unicornStudio.umd.js",i.onload=function(){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){UnicornStudio.init()})}else{UnicornStudio.init()}},(document.head||document.body).appendChild(i)}}();</script>
+</body>
+</html>

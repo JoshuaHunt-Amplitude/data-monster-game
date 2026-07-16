@@ -675,20 +675,6 @@ document.querySelectorAll("#level-nav button[data-zone]").forEach(b => {
   b.addEventListener("click", () => startTeleport(+b.dataset.zone));
 });
 
-// Scroll-driven teleport: the parent article postMessages a target zone as
-// the reader scrolls into each step, so the monster speedruns level→level
-// in sync with the story. If one is already in flight, remember the latest
-// requested zone and apply it the moment the current teleport lands.
-let pendingZone = null;
-window.addEventListener("message", (e) => {
-  const d = e.data;
-  if (d && d.type === "goToZone" && typeof d.zone === "number") {
-    const z = Math.max(0, Math.min(ZONES.length - 1, d.zone));
-    if (teleport) pendingZone = z;
-    else startTeleport(z);
-  }
-});
-
 /* ============================================================
    DATA NOM — cookie out from under the hat (E key or 🍪 button)
    ============================================================ */
@@ -1340,7 +1326,6 @@ function loop(now) {
       player.vy = 0;
       spawnPoof(player.x, groundY);
       teleport = null;
-      if (pendingZone !== null) { const z = pendingZone; pendingZone = null; startTeleport(z); }
     }
   }
 

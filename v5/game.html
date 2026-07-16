@@ -207,20 +207,11 @@
     cursor: pointer;
     transition: opacity 0.6s ease;
   }
-  /* starfield */
-  #title-card::before {
-    content: "";
+  /* animated warp starfield */
+  #title-card #starfield {
     position: absolute; inset: 0;
-    background-image:
-      radial-gradient(1.5px 1.5px at 30px 40px, #fff, transparent),
-      radial-gradient(1.5px 1.5px at 140px 90px, #cdd6ff, transparent),
-      radial-gradient(1px 1px at 220px 30px, #fff, transparent),
-      radial-gradient(1px 1px at 80px 160px, #9aa7ff, transparent),
-      radial-gradient(1.5px 1.5px at 190px 205px, #fff, transparent),
-      radial-gradient(1px 1px at 260px 130px, #ff6b6b, transparent),
-      radial-gradient(1px 1px at 12px 210px, #fff, transparent);
-    background-size: 280px 240px;
-    opacity: 0.55;
+    width: 100%; height: 100%;
+    z-index: 1; pointer-events: none;
   }
   #title-card.hidden { opacity: 0; pointer-events: none; }
 
@@ -327,6 +318,7 @@
 </style>
 
 <div id="title-card">
+  <canvas id="starfield"></canvas>
   <div class="tc-logo">
     <span class="tc-line tri">SOFTWARE</span>
     <span class="tc-line circle">SPEEDRUN</span>
@@ -475,6 +467,71 @@ const ctx = canvas.getContext("2d");
 const worldEl = document.getElementById("world");
 const titleCard = document.getElementById("title-card");
 const controlsHint = document.getElementById("controls-hint");
+
+/* ============================================================
+   TITLE SCREEN — warp-speed starfield (stars stream out from
+   center with short trails; calm, retro). Runs only while the
+   title is up; stopped once the game starts.
+   ============================================================ */
+const starCanvas = document.getElementById("starfield");
+const sctx = starCanvas.getContext("2d");
+const STAR_COLORS = ["#ffffff", "#ffffff", "#cdd6ff", "#9aa7ff", "#7a84ff", "#ff8080"];
+let starW = 0, starH = 0, stars = [], starRAF = null, starLast = 0;
+function resizeStars() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  starW = window.innerWidth; starH = window.innerHeight;
+  starCanvas.width = Math.round(starW * dpr);
+  starCanvas.height = Math.round(starH * dpr);
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function spawnStar(far) {
+  const DEPTH = Math.max(starW, starH);
+  return {
+    x: (Math.random() * 2 - 1) * starW / 2,
+    y: (Math.random() * 2 - 1) * starH / 2,
+    z: far ? DEPTH : Math.random() * DEPTH + 1,
+    col: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
+  };
+}
+function stepStars(now) {
+  const dt = starLast ? Math.min(0.05, (now - starLast) / 1000) : 0;
+  starLast = now;
+  const cx = starW / 2, cy = starH / 2, DEPTH = Math.max(starW, starH);
+  const FOCAL = cx * 0.9, zspeed = DEPTH / 4.2;   // ~4s to cross — gentle warp
+  sctx.clearRect(0, 0, starW, starH);
+  sctx.lineCap = "round";
+  for (const s of stars) {
+    s.z -= zspeed * dt;
+    if (s.z < 1) { Object.assign(s, spawnStar(true)); continue; }
+    const k = FOCAL / s.z;
+    const sx = cx + s.x * k, sy = cy + s.y * k;
+    if (sx < -20 || sx > starW + 20 || sy < -20 || sy > starH + 20) { Object.assign(s, spawnStar(true)); continue; }
+    const near = 1 - s.z / DEPTH;                  // 0 far … 1 near
+    const size = 0.8 + near * 2.4;
+    // warp streak: a tail pointing back toward centre, longer the faster (farther out) it is
+    const dx = sx - cx, dy = sy - cy;
+    const trail = 0.05 + near * 0.16;
+    sctx.globalAlpha = Math.min(1, 0.25 + near * 0.85);
+    sctx.strokeStyle = s.col; sctx.fillStyle = s.col;
+    sctx.lineWidth = size;
+    sctx.beginPath(); sctx.moveTo(sx - dx * trail, sy - dy * trail); sctx.lineTo(sx, sy); sctx.stroke();
+    const r = Math.max(1, Math.round(size));
+    sctx.fillRect(Math.round(sx - r / 2), Math.round(sy - r / 2), r, r);
+  }
+  sctx.globalAlpha = 1;
+  starRAF = requestAnimationFrame(stepStars);
+}
+function startStars() {
+  if (starRAF) return;
+  resizeStars();
+  const N = Math.round(Math.min(320, starW * starH / 4600));
+  stars = Array.from({ length: N }, () => spawnStar(false));
+  starLast = 0;
+  starRAF = requestAnimationFrame(stepStars);
+}
+function stopStars() { if (starRAF) { cancelAnimationFrame(starRAF); starRAF = null; } }
+window.addEventListener("resize", () => { if (starRAF) resizeStars(); });
+startStars();
 const hudProgress = document.getElementById("hud-progress");
 const hudZone = document.getElementById("hud-zone");
 
@@ -553,6 +610,7 @@ function startGame() {
   if (started) return;
   started = true;
   titleCard.classList.add("hidden");
+  stopStars();
   if (!hasMoved) controlsHint.classList.add("show");
 }
 // hide the controls hint once the monster actually moves
@@ -638,8 +696,8 @@ function startTeleport(zi) {
   if (teleport) return;
   const targetX = zi === 0 ? 300 : zi * ZONE_LEN + 420;
   if (Math.abs(targetX - player.x) < 10) return;
-  // scroll/level-nav teleport dismisses the title but skips the controls hint
-  if (!started) { started = true; titleCard.classList.add("hidden"); }
+  // level-nav teleport dismisses the title but skips the controls hint
+  if (!started) { started = true; titleCard.classList.add("hidden"); stopStars(); }
   endControls();
   spawnPoof(player.x, groundY);
   teleport = { targetX, until: performance.now() + 380 };

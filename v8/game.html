@@ -315,6 +315,12 @@
     text-shadow: 0 1px 3px rgba(11,5,36,0.9); white-space: nowrap; z-index: 3; pointer-events: none;
   }
   @media (pointer: coarse) { #minimap-hint { display: none; } }
+  /* scrollytelling: the article + parent nav drive everything, so hide the
+     manual controls, in-game level nav and minimap teleport UI */
+  body.scrolly #controls-hint,
+  body.scrolly #level-nav,
+  body.scrolly #minimap,
+  body.scrolly #minimap-hint { display: none !important; }
 </style>
 
 <div id="title-card">
@@ -610,7 +616,28 @@ function endControls() {
   controlsHint.classList.remove("show");
 }
 
+/* ── Scrollytelling mode ─────────────────────────────────────────────────
+   When embedded in the article, the parent drives the monster by scroll:
+   no title screen, no manual controls — player.x eases toward a target the
+   parent posts on scroll. Toggled + fed via postMessage. */
+let scrolly = false;
+let scrollTargetX = 300;    // world x the monster is easing toward
+let scrollyRunning = false; // true when far from target → run animation
+function setScrolly(on) {
+  scrolly = on;
+  document.body.classList.toggle("scrolly", on);
+  if (on) { startGame(); endControls(); }   // reveal the game, drop the hint
+}
+window.addEventListener("message", e => {
+  const d = e.data || {};
+  if (d.type === "scrollytelling") setScrolly(!!d.on);
+  else if (d.type === "progress" && typeof d.worldX === "number") scrollTargetX = d.worldX;
+});
+// tell the parent we're ready so it can (re)send the mode + first target
+try { parent.postMessage({ type: "game-ready" }, "*"); } catch (e) {}
+
 function pressDir(dir) {
+  if (scrolly) return;                      // scroll-driven: ignore manual input
   if (!started) { startGame(); return; }   // first input just starts the game
   const now = performance.now();
   if (now - lastTap[dir] < DOUBLE_TAP_MS) runLatch[dir] = true;
@@ -623,6 +650,7 @@ function releaseDir(dir) {
 }
 
 window.addEventListener("keydown", e => {
+  if (scrolly) return;   // scroll drives the monster; ignore manual input
   if (e.repeat) {
     if (["ArrowRight","ArrowLeft","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
     return;
@@ -645,7 +673,7 @@ window.addEventListener("keyup", e => {
 });
 
 // click / tap anywhere on the title screen to start
-window.addEventListener("pointerdown", () => { if (!started) startGame(); });
+window.addEventListener("pointerdown", () => { if (!scrolly && !started) startGame(); });
 
 // Touch controls (double-tap works here too via pressDir)
 function bindHold(id, onDown, onUp) {
@@ -1386,25 +1414,47 @@ function loop(now) {
 
   // horizontal
   let dir = 0;
-  if (!teleport && eating === 0 && keys.right) dir += 1;
-  if (!teleport && eating === 0 && keys.left) dir -= 1;
-  const running = (dir === 1 && runLatch.right) || (dir === -1 && runLatch.left);
-  if (dir !== 0 && !ducking) {
-    endControls();
-    player.facing = dir;
-    const prevX = player.x;
-    player.x += dir * (running ? RUN_SPEED * runMult : WALK_SPEED) * dt;
-    player.x = Math.max(120, Math.min(WORLD_LENGTH - 120, player.x));
-    // running through a gate: sparkle burst + 1.5× run speed
-    for (let k = 1; k < ZONES.length; k++) {
-      const gx = k * ZONE_LEN;
-      if ((prevX < gx && player.x >= gx) || (prevX > gx && player.x <= gx)) {
-        spawnPoof(gx, groundY);
-        if (running && !boostedGates.has(k)) {
-          runMult = Math.min(runMult * 1.2, RUN_MULT_MAX);
-          boostedGates.add(k);
+  let running;
+  if (scrolly) {
+    // scroll-driven: ease player.x toward the target the parent posts; walk
+    // when close, run when far so big jumps (nav clicks) read as a sprint.
+    const dx = scrollTargetX - player.x;
+    const adx = Math.abs(dx);
+    scrollyRunning = adx > 640;
+    running = scrollyRunning;
+    if (adx > 3) {
+      dir = dx > 0 ? 1 : -1;
+      player.facing = dir;
+      const speed = scrollyRunning ? RUN_SPEED : WALK_SPEED;
+      const prevX = player.x;
+      player.x += dir * Math.min(adx, speed * dt);
+      player.x = Math.max(120, Math.min(WORLD_LENGTH - 120, player.x));
+      for (let k = 1; k < ZONES.length; k++) {
+        const gx = k * ZONE_LEN;
+        if ((prevX < gx && player.x >= gx) || (prevX > gx && player.x <= gx)) { spawnPoof(gx, groundY); break; }
+      }
+    }
+  } else {
+    if (!teleport && eating === 0 && keys.right) dir += 1;
+    if (!teleport && eating === 0 && keys.left) dir -= 1;
+    running = (dir === 1 && runLatch.right) || (dir === -1 && runLatch.left);
+    if (dir !== 0 && !ducking) {
+      endControls();
+      player.facing = dir;
+      const prevX = player.x;
+      player.x += dir * (running ? RUN_SPEED * runMult : WALK_SPEED) * dt;
+      player.x = Math.max(120, Math.min(WORLD_LENGTH - 120, player.x));
+      // running through a gate: sparkle burst + 1.5× run speed
+      for (let k = 1; k < ZONES.length; k++) {
+        const gx = k * ZONE_LEN;
+        if ((prevX < gx && player.x >= gx) || (prevX > gx && player.x <= gx)) {
+          spawnPoof(gx, groundY);
+          if (running && !boostedGates.has(k)) {
+            runMult = Math.min(runMult * 1.2, RUN_MULT_MAX);
+            boostedGates.add(k);
+          }
+          break;
         }
-        break;
       }
     }
   }

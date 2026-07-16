@@ -59,7 +59,11 @@
   }
   body:not(.mode-landing) #landing { opacity: 0; pointer-events: none; }
   body.mode-landing { overflow: hidden; }
-  .l-frame { position: absolute; inset: 18px; border: 0.5px solid var(--hairline-strong); pointer-events: none; }
+  /* Unicorn Studio WebGL backdrop — hidden until the game button is hovered */
+  #us-bg { position: absolute; inset: 0; z-index: 0; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+  #us-bg canvas { display: block; width: 100% !important; height: 100% !important; }
+  #landing.us-active #us-bg { opacity: 1; }
+  .l-frame { position: absolute; inset: 18px; border: 0.5px solid var(--hairline-strong); pointer-events: none; z-index: 1; }
   .l-title { position: relative; z-index: 2; padding: 0 clamp(20px, 5vw, 64px); }
   .l-title canvas { display: block; margin: 0 auto; height: auto; }
   .l-title canvas.speedrunning { width: min(86vw, 1000px); }
@@ -277,6 +281,7 @@
 
 <!-- ============================ LANDING (selector) ============================ -->
 <div id="landing">
+  <div id="us-bg" data-us-project="b4EHpFNwCbx7EAyviXBM"></div>
   <div class="l-frame"></div>
   <div class="l-title">
     <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
@@ -540,13 +545,20 @@ function sizeCanvas(c, w, h) {
 
 // pixel title — dots assemble from random positions, then keep a subtle
 // twinkle where random dots dip to a darker blue on a staggered ~1200ms cycle.
-const TITLE_BASE = "#3b82f6", TITLE_DARK = "#1730b8";
-function mixColor(a, b, t) {
-  const h = (s, i) => parseInt(s.slice(1 + i * 2, 3 + i * 2), 16);
-  const r = Math.round(h(a, 0) + (h(b, 0) - h(a, 0)) * t);
-  const g = Math.round(h(a, 1) + (h(b, 1) - h(a, 1)) * t);
-  const bl = Math.round(h(a, 2) + (h(b, 2) - h(a, 2)) * t);
-  return `rgb(${r},${g},${bl})`;
+const TITLE_BASE = [59, 130, 246], TITLE_DARK = [23, 48, 184], TITLE_WHITE = [255, 255, 255];
+function lerp3(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+
+// white-on-hover of the "Read & play game" button — eased ~200ms to match the
+// backdrop fade. Deterministic from (from,to,t0) so both title canvases stay in sync.
+let wFrom = 0, wTo = 0, wT0 = -1e9;
+function titleWhiteAt(now) {
+  const p = Math.min(1, Math.max(0, (now - wT0) / 200));
+  const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;   // easeInOutQuad
+  return wFrom + (wTo - wFrom) * e;
+}
+function setTitleWhite(on) {
+  const now = performance.now();
+  wFrom = titleWhiteAt(now); wTo = on ? 1 : 0; wT0 = now;
 }
 function renderPixelTitle(c, idx) {
   const g = computeDots(c.dataset.pixel, { shape: c.dataset.shape, fontSize: 220, cell: 9 });
@@ -565,10 +577,13 @@ function renderPixelTitle(c, idx) {
       let p = (t - d.delay) / DUR;
       p = p < 0 ? 0 : p > 1 ? 1 : p;
       const e = 1 - Math.pow(1 - p, 3);
-      // twinkle: dip toward the darker blue near each dot's staggered peak
+      // twinkle: dip toward the darker blue near each dot's staggered peak,
+      // then blend the whole title toward white while the game button is hovered
+      const white = titleWhiteAt(now);
       const k = 0.5 + 0.5 * Math.sin((now / 1200) * Math.PI * 2 + d.phase);
-      const dark = k > 0.86 ? (k - 0.86) / 0.14 : 0;
-      ctx.fillStyle = dark > 0 ? mixColor(TITLE_BASE, TITLE_DARK, dark) : TITLE_BASE;
+      const dark = white < 1 && k > 0.86 ? (k - 0.86) / 0.14 : 0;
+      const col = lerp3(lerp3(TITLE_BASE, TITLE_DARK, dark), TITLE_WHITE, white);
+      ctx.fillStyle = `rgb(${col[0] | 0},${col[1] | 0},${col[2] | 0})`;
       ctx.globalAlpha = e;
       stamp(ctx, d.sx + (d.x - d.sx) * e, d.sy + (d.y - d.sy) * e, g.r * (0.35 + 0.65 * e), g.shape);
     }
@@ -589,6 +604,19 @@ function setMode(mode) {
 }
 document.querySelectorAll("#landing .l-choices button, #mode-toggle button").forEach(b =>
   b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+// hovering "Read & play game" fades in the Unicorn Studio backdrop and turns
+// the pixel title white — both only while hovering that button.
+const landing = document.getElementById("landing");
+const gameBtn = document.querySelector('#landing .l-choices button[data-mode="game"]');
+if (gameBtn) {
+  const on = () => { landing.classList.add("us-active"); setTitleWhite(true); };
+  const off = () => { landing.classList.remove("us-active"); setTitleWhite(false); };
+  gameBtn.addEventListener("pointerenter", on);
+  gameBtn.addEventListener("pointerleave", off);
+  gameBtn.addEventListener("focus", on);
+  gameBtn.addEventListener("blur", off);
+}
 // always start at the selector — a refresh returns here (like the reference site);
 // tablet/mobile have no selector or game, so they open straight into the article.
 setMode(isSmall() ? "article" : "landing");
@@ -793,5 +821,8 @@ document.querySelectorAll("canvas.flowviz").forEach((cv) => {
   io.observe(cv);
 });
 </script>
+
+<!-- Unicorn Studio SDK — loads once, then inits the #us-bg scene -->
+<script>!function(){var u=window.UnicornStudio;if(u&&u.init){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){u.init()})}else{u.init()}}else{window.UnicornStudio={isInitialized:!1};var i=document.createElement("script");i.src="https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.2.7/dist/unicornStudio.umd.js",i.onload=function(){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){UnicornStudio.init()})}else{UnicornStudio.init()}},(document.head||document.body).appendChild(i)}}();</script>
 </body>
 </html>

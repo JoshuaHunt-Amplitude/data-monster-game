@@ -114,6 +114,7 @@
   }
   #hud-score { color: #ffd447; font-size: 15px; letter-spacing: 1px; }
   #hud-best { color: rgba(238,240,255,0.55); font-size: 11px; margin-left: 10px; letter-spacing: 1.5px; }
+  #hud-timer { color: #eef0ff; font-size: 16px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 
   #level-nav {
     position: fixed;
@@ -280,13 +281,15 @@
     font-family: var(--font-mono); font-size: 11px; font-weight: 600;
     letter-spacing: 3px; text-transform: uppercase; color: #ffd447; margin-bottom: 6px;
   }
-  #complete .c-title { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 14px; }
-  #complete .c-score { font-family: var(--font-mono); font-size: 18px; letter-spacing: 1.5px; }
-  #complete .c-score b { color: #ffd447; }
+  #complete .c-title { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 12px; }
+  #complete .c-time { font-family: var(--font-mono); font-size: 40px; font-weight: 700; letter-spacing: 1px; color: #fff; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  #complete .c-time b { color: #fff; }
   #complete .c-best {
     font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px;
-    color: rgba(238, 240, 255, 0.6); margin-top: 6px;
+    color: rgba(238, 240, 255, 0.6); margin-top: 4px;
   }
+  #complete .c-score { font-family: var(--font-mono); font-size: 14px; letter-spacing: 1.5px; margin-top: 14px; color: rgba(238,240,255,0.85); }
+  #complete .c-score b { color: #ffd447; }
 
   #touch-controls { display: none; }
   @media (pointer: coarse) {
@@ -319,6 +322,7 @@
 
 <div id="hud">
   <span id="hud-score">★ 0<small id="hud-best"></small></span>
+  <span id="hud-timer">0.000</span>
   <span id="hud-progress">0%</span>
 </div>
 
@@ -368,8 +372,9 @@
 <div id="complete">
   <div class="c-kicker">Level complete</div>
   <div class="c-title">🏁 World 1 cleared</div>
-  <div class="c-score">SCORE <b id="c-score-val">0</b></div>
-  <div class="c-best">BEST <span id="c-best-val">0</span></div>
+  <div class="c-time"><b id="c-time-val">0.000</b></div>
+  <div class="c-best">BEST TIME <span id="c-best-time">—</span></div>
+  <div class="c-score">SCORE <b id="c-score-val">0</b> &nbsp;·&nbsp; BEST <span id="c-best-val">0</span></div>
 </div>
 
 <div id="touch-controls">
@@ -485,6 +490,18 @@ const COINS = (() => {
 let score = 0;
 let hiScore = +(localStorage.getItem("dm-hiscore") || 0) || 0;
 function bumpHiScore() { if (score > hiScore) { hiScore = score; try { localStorage.setItem("dm-hiscore", hiScore); } catch (e) {} } }
+
+/* Speedrun timer — the run is timed from the first movement to crossing the flag,
+   to the millisecond. Best time persists so replays chase a personal best. */
+let runStart = 0;   // performance.now() when the run began; 0 = not started
+let runMs = 0;      // elapsed ms (frozen at the finish)
+let bestMs = +(localStorage.getItem("dm-besttime") || 0) || 0;
+function fmtTime(ms) {
+  const s = ms / 1000;
+  if (s >= 60) { const m = Math.floor(s / 60); return m + ":" + (s - m * 60).toFixed(3).padStart(6, "0"); }
+  return s.toFixed(3);
+}
+function bumpBestTime() { if (bestMs === 0 || runMs < bestMs) { bestMs = Math.round(runMs); try { localStorage.setItem("dm-besttime", bestMs); } catch (e) {} } }
 
 /* ============================================================
    LEVEL CONTENT — two editorial cards per zone
@@ -616,6 +633,7 @@ startStars();
 const hudProgress = document.getElementById("hud-progress");
 const hudScore = document.getElementById("hud-score");
 const hudBest = document.getElementById("hud-best");
+const hudTimer = document.getElementById("hud-timer");
 const completeEl = document.getElementById("complete");
 function updateScoreHud() {
   hudScore.innerHTML = "★ " + score + (hiScore > 0 ? `<small id="hud-best">BEST ${hiScore}</small>` : "");
@@ -983,6 +1001,8 @@ let jumps = 0;   // jumps used since last grounded (max 2 = double jump)
 let finished = false;      // true once the monster crosses the finish flag
 let flagLitAt = 0;         // timestamp the flag lit up (for the glow ramp)
 function showComplete() {
+  document.getElementById("c-time-val").textContent = fmtTime(runMs);
+  document.getElementById("c-best-time").textContent = fmtTime(bestMs || runMs);
   document.getElementById("c-score-val").textContent = score;
   document.getElementById("c-best-val").textContent = hiScore;
   completeEl.classList.add("show");
@@ -1032,104 +1052,6 @@ function tiled(p, period, camX, tile) {
 }
 
 /* ============================================================
-   SCENERY — ZONE 1: THE OFFICE (0 .. 3600)
-   ============================================================ */
-function drawOffice(camX) {
-  const x0 = 0, x1 = ZONE_LEN;
-  // windows showing daytime skyline
-  for (let wx = 260; wx < x1 - 400; wx += 950) {
-    const sx = wx - camX;
-    if (sx < -600 || sx > W + 100) continue;
-    const wTop = groundY - 520, wH = 330, wW = 480;
-    px(sx - 14, wTop - 14, wW + 28, wH + 28, "#2c3352");       // frame
-    px(sx, wTop, wW, wH, "#7ec8f5");                            // sky
-    // city silhouette
-    ctx.fillStyle = "#5b9ec7";
-    for (let b = 0; b < 7; b++) {
-      const bw = 40 + rand(wx + b) * 50, bh = 60 + rand(wx + b * 7) * 130;
-      ctx.fillRect(sx + 20 + b * 64, wTop + wH - bh, bw, bh);
-    }
-    // clouds in window
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.fillRect(sx + 60 + rand(wx) * 200, wTop + 40, 90, 16);
-    ctx.fillRect(sx + 80 + rand(wx) * 200, wTop + 30, 50, 12);
-    // mullions
-    px(sx + wW / 2 - 5, wTop, 10, wH, "#2c3352");
-    px(sx, wTop + wH / 2 - 5, wW, 10, "#2c3352");
-  }
-
-  // whiteboard
-  for (const wx of [1750]) {
-    const sx = wx - camX;
-    if (sx > -400 && sx < W + 100) {
-      px(sx, groundY - 470, 330, 200, "#e8ecf2");
-      px(sx - 8, groundY - 478, 346, 8, "#9aa4b8");
-      px(sx - 8, groundY - 270, 346, 8, "#9aa4b8");
-      ctx.fillStyle = "#2a56c9";
-      ctx.font = "bold 22px 'Courier New', monospace";
-      ctx.fillText("PLAN → ITERATE", sx + 24, groundY - 420);
-      ctx.fillText("→ SHIP 🚀", sx + 24, groundY - 388);
-      px(sx + 24, groundY - 370, 120, 6, "#d84f7a");
-      px(sx + 24, groundY - 350, 160, 6, "#3fae5c");
-      px(sx + 250, groundY - 360, 40, 40, "#f2c94c"); // sticky note
-    }
-  }
-
-  // desks with monitors
-  for (const dx of [650, 2450, 3050]) {
-    const sx = dx - camX;
-    if (sx < -350 || sx > W + 100) continue;
-    px(sx, groundY - 130, 300, 16, "#c97a2e");            // desktop
-    px(sx + 16, groundY - 114, 18, 114, "#8a5420");       // legs
-    px(sx + 266, groundY - 114, 18, 114, "#8a5420");
-    px(sx + 70, groundY - 260, 160, 110, "#20242f");      // monitor
-    px(sx + 80, groundY - 250, 140, 90, "#101622");       // screen
-    ctx.fillStyle = "#4cd964"; ctx.fillRect(sx + 90, groundY - 238, 70, 6);
-    ctx.fillStyle = "#e8734a"; ctx.fillRect(sx + 90, groundY - 224, 100, 6);
-    ctx.fillStyle = "#5aa0f2"; ctx.fillRect(sx + 90, groundY - 210, 50, 6);
-    ctx.fillStyle = "#c8cede"; ctx.fillRect(sx + 90, groundY - 196, 88, 6);
-    px(sx + 140, groundY - 150, 20, 20, "#20242f");       // stand
-  }
-
-  // server racks with blinking LEDs
-  for (const rx of [1300, 2900]) {
-    const sx = rx - camX;
-    if (sx < -220 || sx > W + 100) continue;
-    px(sx, groundY - 340, 180, 340, "#1a1e2a");
-    px(sx + 10, groundY - 330, 160, 320, "#252b3c");
-    for (let row = 0; row < 5; row++) {
-      const ry = groundY - 310 + row * 62;
-      px(sx + 20, ry, 140, 44, "#141822");
-      for (let d = 0; d < 4; d++) {
-        const blink = Math.sin(performance.now() * 0.004 + rx + row * 3 + d * 7) > 0;
-        px(sx + 30 + d * 16, ry + 10, 8, 8, blink ? "#4cd964" : "#173d1f");
-      }
-      px(sx + 100, ry + 10, 50, 22, "#0e1118");
-    }
-  }
-
-  // plants
-  for (const gx of [430, 1660, 2250, 3350]) {
-    const sx = gx - camX;
-    if (sx < -100 || sx > W + 100) continue;
-    px(sx, groundY - 60, 56, 60, "#b8562e");
-    ctx.fillStyle = "#3fae5c";
-    ctx.beginPath(); ctx.ellipse(sx + 28, groundY - 85, 38, 34, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#2e8547";
-    ctx.beginPath(); ctx.ellipse(sx + 12, groundY - 70, 18, 16, 0, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // EXIT sign near zone end
-  const ex = 3480 - camX;
-  if (ex > -160 && ex < W + 100) {
-    px(ex, groundY - 500, 130, 56, "#1f7a3d");
-    ctx.fillStyle = "#dff5e4";
-    ctx.font = "bold 26px 'Courier New', monospace";
-    ctx.fillText("EXIT→", ex + 18, groundY - 462);
-  }
-}
-
-/* ============================================================
    ZONE 2: LOMBARD STREET (3600 .. 7200)
    ============================================================ */
 /* Painted plate backdrop: scaled so the plate's grass line sits exactly at
@@ -1159,152 +1081,6 @@ function drawPlateZone(base, plate, camX) {
 }
 
 /* ============================================================
-   ZONE 3: GOLDEN GATE (7200 .. 10800)
-   ============================================================ */
-function drawGoldenGate(camX, time) {
-  const base = ZONE_LEN * 2;
-  const p = 0.7;
-  const fade = zoneAlpha(base, camX);
-
-  // water
-  const wy = groundY - 170;
-  ctx.globalAlpha = fade;
-  ctx.fillStyle = "#3a7fc2";
-  ctx.fillRect(0, wy, W, 170);
-  ctx.fillStyle = "rgba(255,255,255,0.25)";
-  tiled(0.4, 340, camX, sx => {
-    ctx.fillRect(sx, wy + 24, 60, 4);
-    ctx.fillRect(sx + 160, wy + 70, 60, 4);
-    ctx.fillRect(sx + 80, wy + 116, 60, 4);
-  });
-  // sailboats
-  for (const bxo of [300, 1200, 2100]) {
-    const sx = parX(base, bxo, 0.45, camX);
-    if (sx < -80 || sx > W + 80) continue;
-    const by = wy + 40 + Math.sin(time * 0.001 + bxo) * 4;
-    px(sx, by, 54, 14, "#e8e2d0");
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath(); ctx.moveTo(sx + 26, by - 4); ctx.lineTo(sx + 26, by - 44); ctx.lineTo(sx + 48, by - 4); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // bridge: deck + two towers + cables (single parallax group, zone-anchored)
-  ctx.globalAlpha = fade;
-  const deckY = groundY - 300;
-  const t1 = parX(base, 500, p, camX), t2 = parX(base, 2100, p, camX);
-  const INTL = "#c94430", INTL2 = "#a83424";
-  // deck spans the whole zone band
-  const dx0 = parX(base, -1400, p, camX), dx1 = parX(base, 4000, p, camX);
-  if (dx1 > 0 && dx0 < W) {
-    px(Math.max(-50, dx0), deckY, Math.min(W + 100, dx1) - Math.max(-50, dx0), 26, INTL);
-    px(Math.max(-50, dx0), deckY + 26, Math.min(W + 100, dx1) - Math.max(-50, dx0), 8, INTL2);
-  }
-  for (const tx of [t1, t2]) {
-    if (tx < -300 || tx > W + 300) continue;
-    // tower legs + cross braces, art-deco steps
-    px(tx, deckY - 380, 26, 380 + 120, INTL);
-    px(tx + 94, deckY - 380, 26, 380 + 120, INTL);
-    px(tx - 8, deckY - 380, 136, 20, INTL2);
-    px(tx - 4, deckY - 250, 128, 18, INTL2);
-    px(tx, deckY - 120, 120, 16, INTL2);
-  }
-  // suspension cables
-  ctx.strokeStyle = INTL;
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(t1 + 60, deckY - 370);
-  ctx.quadraticCurveTo((t1 + t2) / 2 + 60, deckY + 30, t2 + 60, deckY - 370);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(t1 + 60, deckY - 370);
-  ctx.quadraticCurveTo(t1 - 800, deckY + 60, t1 - 1700, deckY - 200);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(t2 + 60, deckY - 370);
-  ctx.quadraticCurveTo(t2 + 800, deckY + 60, t2 + 1700, deckY - 200);
-  ctx.stroke();
-  // hangers
-  ctx.lineWidth = 2;
-  for (let hx = t1 + 60; hx < t2 + 60; hx += 90) {
-    const t = (hx - (t1 + 60)) / (t2 - t1);
-    const cy = (1 - t) * (1 - t) * (deckY - 370) + 2 * (1 - t) * t * (deckY + 30) + t * t * (deckY - 370);
-    ctx.beginPath(); ctx.moveTo(hx, cy); ctx.lineTo(hx, deckY); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
-
-/* ============================================================
-   ZONE 4: PAINTED LADIES (10800 .. 14400)
-   ============================================================ */
-function drawPaintedLadies(camX) {
-  const base = ZONE_LEN * 3;
-  // downtown skyline behind: repeating band with the pyramid tower
-  ctx.globalAlpha = zoneAlpha(base, camX);
-  tiled(0.3, 2100, camX, sx => {
-    ctx.fillStyle = "rgba(130, 160, 195, 0.5)";
-    for (let b = 0; b < 6; b++) {
-      const bh = 100 + rand(b + 80) * 200;
-      ctx.fillRect(sx + b * 310, groundY - 220 - bh, 80 + rand(b + 3) * 50, bh + 220);
-    }
-    ctx.fillStyle = "rgba(130, 160, 195, 0.6)";
-    ctx.beginPath();
-    ctx.moveTo(sx + 1900, groundY - 220);
-    ctx.lineTo(sx + 1940, groundY - 620);
-    ctx.lineTo(sx + 1980, groundY - 220);
-    ctx.fill();
-  });
-  ctx.globalAlpha = 1;
-
-  // the ladies (zone-anchored parallax row)
-  const houseCols = [["#9db8d9", "#6b88ad"], ["#a8d0a0", "#7aa872"], ["#e8d9a8", "#c0b078"], ["#e0a8b8", "#b87890"], ["#c0a8e0", "#9078b8"], ["#a8d8d0", "#78b0a8"]];
-  const p = 0.85;
-  for (let i = 0; i < 7; i++) {
-    const hx = parX(base, 150 + i * 360, p, camX);
-    if (hx < -400 || hx > W + 200) continue;
-    const [body, trim] = houseCols[i % houseCols.length];
-    const hh = 300;
-    px(hx, groundY - hh - 60, 320, hh, body);
-    // gable
-    ctx.fillStyle = trim;
-    ctx.beginPath(); ctx.moveTo(hx - 12, groundY - hh - 60); ctx.lineTo(hx + 160, groundY - hh - 150); ctx.lineTo(hx + 332, groundY - hh - 60); ctx.fill();
-    px(hx - 12, groundY - hh - 66, 344, 12, trim);
-    // gable window
-    px(hx + 140, groundY - hh - 96, 40, 40, "#3a4a6a");
-    // bay windows
-    for (let flr = 0; flr < 2; flr++) {
-      const fy = groundY - hh + 30 + flr * 130;
-      px(hx + 30, fy, 70, 90, trim);
-      px(hx + 40, fy + 10, 50, 70, "#3a4a6a");
-      px(hx + 220, fy, 70, 90, trim);
-      px(hx + 230, fy + 10, 50, 70, "#3a4a6a");
-    }
-    // door + stairs
-    px(hx + 135, groundY - 130, 56, 70, trim);
-    px(hx + 143, groundY - 122, 40, 62, "#2e3850");
-    px(hx + 120, groundY - 66, 86, 8, trim);
-    px(hx + 128, groundY - 58, 70, 8, trim);
-  }
-
-  // park foreground: trees + bench + lamp
-  for (const txo of [150, 1450, 2900]) {
-    const sx = base + txo - camX;
-    if (sx < -160 || sx > W + 160) continue;
-    px(sx + 26, groundY - 130, 22, 130, "#6a4a2e");
-    ctx.fillStyle = "#3f9e4d";
-    ctx.beginPath(); ctx.ellipse(sx + 37, groundY - 175, 75, 62, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#2e8547";
-    ctx.beginPath(); ctx.ellipse(sx + 5, groundY - 145, 40, 32, 0, 0, Math.PI * 2); ctx.fill();
-  }
-  const bx = base + 2100 - camX;
-  if (bx > -200 && bx < W + 100) {
-    px(bx, groundY - 90, 170, 12, "#8a5a33");
-    px(bx, groundY - 60, 170, 12, "#8a5a33");
-    px(bx + 10, groundY - 48, 12, 48, "#4a4a4a");
-    px(bx + 148, groundY - 48, 12, 48, "#4a4a4a");
-  }
-}
-
-/* ============================================================
    SHARED SCENERY
    ============================================================ */
 const clouds = Array.from({ length: 30 }, (_, i) => ({ x: ZONE_LEN + i * 480 + rand(i + 5) * 400, y: 40 + rand(i + 11) * 200, s: 0.7 + rand(i + 17) * 1.1 }));
@@ -1327,28 +1103,9 @@ function drawGroundSegment(sxStart, sxEnd, zi, camX) {
     ctx.restore();
     return;
   }
-  if (zi === 0) {
-    // office floor: dark tile + orange brick ledge
-    px(sxStart, groundY, sxEnd - sxStart, H - groundY, "#23263c");
-    px(sxStart, groundY, sxEnd - sxStart, 12, "#c97a2e");
-    px(sxStart, groundY + 12, sxEnd - sxStart, 4, "#8a5420");
-    ctx.strokeStyle = "rgba(120,130,160,0.25)";
-    for (let sx = sxStart - ((sxStart + camX) % 90); sx < sxEnd; sx += 90) {
-      ctx.strokeRect(sx, groundY + 16, 90, 60);
-    }
-  } else {
-    // grass + dirt
-    px(sxStart, groundY, sxEnd - sxStart, H - groundY, "#7a4a2c");
-    px(sxStart, groundY, sxEnd - sxStart, 14, "#46b04a");
-    px(sxStart, groundY + 14, sxEnd - sxStart, 6, "#2e7d32");
-    ctx.fillStyle = "rgba(60,34,18,0.5)";
-    for (let sx = sxStart - ((sxStart + camX) % 64); sx < sxEnd; sx += 64) {
-      for (let row = 0; row < 3; row++) {
-        const off = (row % 2) * 32;
-        ctx.fillRect(sx + off, groundY + 26 + row * 34, 26, 4);
-      }
-    }
-  }
+  // plate not loaded yet: plain dark fill (no procedural floor) so nothing old
+  // flashes before the painted ground strip loads in
+  px(sxStart, groundY, sxEnd - sxStart, H - groundY, (plate && plate.fill) || "#05060c");
 }
 
 function drawScene(camX, time) {
@@ -1380,10 +1137,9 @@ function drawScene(camX, time) {
     ctx.beginPath();
     ctx.rect(sx0, 0, sx1 - sx0, H);
     ctx.clip();
+    // painted plate when ready; otherwise leave the sky gradient (clean loading
+    // state) — no procedural stand-in, so no old-art flash before the plate loads
     if (plateReady(PLATES[zi])) drawPlateZone(zi * ZONE_LEN, PLATES[zi], camX);
-    else if (zi === 0) drawOffice(camX);
-    else if (zi === 2) drawGoldenGate(camX, time);
-    else if (zi === 3) drawPaintedLadies(camX);
     ctx.restore();
   }
 
@@ -1725,11 +1481,17 @@ function loop(now) {
     }
   }
 
+  // speedrun timer: starts on the first movement, ticks until the flag
+  if (runStart === 0 && started && player.x !== START_X) runStart = now;
+  if (runStart !== 0 && !finished) runMs = now - runStart;
+
   // finish line — cross the flag once → light it up + celebrate. The −8 epsilon
   // covers scroll-ease stopping a few px short of the target in the embed.
   if (!finished && player.x >= FLAG_X - 8) {
     finished = true;
     flagLitAt = now;
+    if (runStart !== 0) runMs = now - runStart;   // freeze the final time
+    bumpBestTime();
     bumpHiScore();
     spawnPoof(FLAG_X, groundY);
     spawnPoof(FLAG_X + 40, groundY - 120);
@@ -1740,6 +1502,7 @@ function loop(now) {
   maxX = Math.max(maxX, player.x);
   const prog = Math.max(0, Math.min(100, Math.round((player.x - START_X) / (FLAG_X - START_X) * 100)));
   hudProgress.textContent = prog + "%";
+  hudTimer.textContent = fmtTime(runMs);
   updateLevelUI();
 
   drawScene(camX, now);

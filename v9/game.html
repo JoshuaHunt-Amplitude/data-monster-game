@@ -101,7 +101,8 @@
     left: 0;
     right: 0;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     padding: 0 24px;
     z-index: 3;
     font-family: var(--font-mono);
@@ -111,6 +112,8 @@
     text-shadow: 0 1px 3px rgba(11, 5, 36, 0.9);
     pointer-events: none;
   }
+  #hud-score { color: #ffd447; font-size: 15px; letter-spacing: 1px; }
+  #hud-best { color: rgba(238,240,255,0.55); font-size: 11px; margin-left: 10px; letter-spacing: 1.5px; }
 
   #level-nav {
     position: fixed;
@@ -259,6 +262,32 @@
   }
   #controls-hint.show { opacity: 1; }
 
+  /* completion banner — fades in when the monster crosses the finish flag */
+  #complete {
+    position: fixed; left: 50%; top: 38%;
+    transform: translate(-50%, -50%) scale(0.9);
+    text-align: center; z-index: 5;
+    padding: 26px 44px;
+    background: rgba(13, 12, 40, 0.86);
+    border: 3px solid #ffd447;
+    border-radius: 8px;
+    box-shadow: 0 0 0 3px #0b0524, 0 0 44px rgba(255, 212, 71, 0.35);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  #complete.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #complete .c-kicker {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase; color: #ffd447; margin-bottom: 6px;
+  }
+  #complete .c-title { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 14px; }
+  #complete .c-score { font-family: var(--font-mono); font-size: 18px; letter-spacing: 1.5px; }
+  #complete .c-score b { color: #ffd447; }
+  #complete .c-best {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px;
+    color: rgba(238, 240, 255, 0.6); margin-top: 6px;
+  }
+
   #touch-controls { display: none; }
   @media (pointer: coarse) {
     #touch-controls {
@@ -289,6 +318,7 @@
 <div id="world"></div>
 
 <div id="hud">
+  <span id="hud-score">★ 0<small id="hud-best"></small></span>
   <span id="hud-progress">0%</span>
 </div>
 
@@ -335,6 +365,13 @@
 </div>
 <div id="controls-hint">→ / ← WALK &nbsp;·&nbsp; DOUBLE-TAP → RUN &nbsp;·&nbsp; ↑ JUMP<br>↑↑ DOUBLE JUMP &nbsp;·&nbsp; ↓ DUCK &nbsp;·&nbsp; E = 🍪 DATA NOM</div>
 
+<div id="complete">
+  <div class="c-kicker">Level complete</div>
+  <div class="c-title">🏁 World 1 cleared</div>
+  <div class="c-score">SCORE <b id="c-score-val">0</b></div>
+  <div class="c-best">BEST <span id="c-best-val">0</span></div>
+</div>
+
 <div id="touch-controls">
   <div class="pad">
     <button id="btn-left">◀</button>
@@ -364,6 +401,8 @@ const SPRITES = {
    ============================================================ */
 const ZONE_LEN = 3600;
 const WORLD_LENGTH = ZONE_LEN * 5;        // 18000
+const START_X = 300;                       // where the monster spawns
+const FLAG_X = WORLD_LENGTH - 450;         // finish line (17550) — 100% here
 const WALK_SPEED = 560;
 const RUN_SPEED = 1320;
 const DOUBLE_TAP_MS = 260;                // window for double-tap → run
@@ -371,6 +410,9 @@ const JUMP_VELOCITY = 980;
 const GRAVITY = 2700;
 const PLAYER_H = 150;                     // on-screen monster height
 const GROUND_FRAC = 0.82;
+const COIN_VALUE = 10;
+const GEM_VALUE = 100;
+const MANUAL_HOLD_MS = 500;               // how long manual input stays "the driver" in the embed
 
 const ZONES = [
   { name: "IDEA",       skyTop: "#141024", skyBot: "#0a0820" },
@@ -402,6 +444,47 @@ function plateReady(p) { return p && p.bg.complete && p.bg.naturalWidth > 0 && p
 const gateImg = loadImg("../assets/speed-boost-gate.png");
 const GATE = { W: 1187, H: 777, screenH: 330, openCx: 0.455, split: 0.64, sink: 6 };
 function gateReady() { return gateImg.complete && gateImg.naturalWidth > 0; }
+
+/* ============================================================
+   COLLECTIBLES — coins (small) + diamonds (big). Art is optional:
+   drop transparent PNGs at assets/coin.png / assets/diamond.png (or
+   spin strips) and set `frames`; until then they're drawn procedurally.
+   Positions are laid out per zone as ground runs, jump arcs, and one
+   high diamond that needs a jump — gate boundaries are left clear.
+   `gy` = height (px) of the item's CENTER above the ground line.
+   ============================================================ */
+const coinImg = loadImg("../assets/coin.png");
+const gemImg  = loadImg("../assets/diamond.png");
+const COIN = { img: coinImg, frames: 1, size: 46 };   // size = on-screen px; bump frames if a spin strip is supplied
+const GEM  = { img: gemImg,  frames: 1, size: 60 };
+function nearGate(x) { for (let k = 1; k < ZONES.length; k++) if (Math.abs(x - k * ZONE_LEN) < 240) return true; return false; }
+const COINS = (() => {
+  const out = [];
+  const GROUND_GY = 92;                 // walk-height coins
+  for (let zi = 0; zi < 5; zi++) {
+    const base = zi * ZONE_LEN;
+    // a run of ground coins across the zone
+    for (let i = 0; i < 7; i++) {
+      const x = base + 520 + i * 360;
+      if (x >= FLAG_X || nearGate(x)) continue;
+      out.push({ x, gy: GROUND_GY, type: "coin" });
+    }
+    // a jump arc mid-zone
+    const ax = base + 1720;
+    for (let i = 0; i < 5; i++) {
+      const t = i / 4;
+      out.push({ x: ax + i * 95, gy: GROUND_GY + Math.sin(t * Math.PI) * 190, type: "coin" });
+    }
+    // one diamond per zone, up high (rewards a jump)
+    const gx = base + 2680;
+    if (gx < FLAG_X && !nearGate(gx)) out.push({ x: gx, gy: 236, type: "gem" });
+  }
+  return out;
+})();
+
+let score = 0;
+let hiScore = +(localStorage.getItem("dm-hiscore") || 0) || 0;
+function bumpHiScore() { if (score > hiScore) { hiScore = score; try { localStorage.setItem("dm-hiscore", hiScore); } catch (e) {} } }
 
 /* ============================================================
    LEVEL CONTENT — two editorial cards per zone
@@ -531,6 +614,13 @@ function stopStars() { if (starRAF) { cancelAnimationFrame(starRAF); starRAF = n
 window.addEventListener("resize", () => { if (starRAF) resizeStars(); });
 startStars();
 const hudProgress = document.getElementById("hud-progress");
+const hudScore = document.getElementById("hud-score");
+const hudBest = document.getElementById("hud-best");
+const completeEl = document.getElementById("complete");
+function updateScoreHud() {
+  hudScore.innerHTML = "★ " + score + (hiScore > 0 ? `<small id="hud-best">BEST ${hiScore}</small>` : "");
+}
+updateScoreHud();
 
 let W = 0, H = 0, groundY = 0;
 function resize() {
@@ -623,6 +713,17 @@ function endControls() {
 let scrolly = false;
 let scrollTargetX = 300;    // world x the monster is easing toward
 let scrollyRunning = false; // true when far from target → run animation
+// Bidirectional sync: in the embed, manual input takes ownership for a beat and
+// the game drives the article; otherwise the article's scroll drives the game.
+let lastManual = -1e9;      // performance.now() of the last manual input
+let lastPostedX = -1;       // dedupe the worldX we post up to the parent
+function manualDriving() { return performance.now() - lastManual < MANUAL_HOLD_MS; }
+function noteManual() { lastManual = performance.now(); }
+function postWorldX() {
+  if (Math.abs(player.x - lastPostedX) < 0.5) return;
+  lastPostedX = player.x;
+  try { parent.postMessage({ type: "worldX", worldX: player.x }, "*"); } catch (e) {}
+}
 function setScrolly(on) {
   scrolly = on;
   document.body.classList.toggle("scrolly", on);
@@ -631,14 +732,15 @@ function setScrolly(on) {
 window.addEventListener("message", e => {
   const d = e.data || {};
   if (d.type === "scrollytelling") setScrolly(!!d.on);
-  else if (d.type === "progress" && typeof d.worldX === "number") scrollTargetX = d.worldX;
+  // while the player is driving, ignore the article's scroll target (no snap-back)
+  else if (d.type === "progress" && typeof d.worldX === "number" && !manualDriving()) scrollTargetX = d.worldX;
 });
 // tell the parent we're ready so it can (re)send the mode + first target
 try { parent.postMessage({ type: "game-ready" }, "*"); } catch (e) {}
 
 function pressDir(dir) {
-  if (scrolly) return;                      // scroll-driven: ignore manual input
   if (!started) { startGame(); return; }   // first input just starts the game
+  noteManual();
   const now = performance.now();
   if (now - lastTap[dir] < DOUBLE_TAP_MS) runLatch[dir] = true;
   lastTap[dir] = now;
@@ -650,7 +752,6 @@ function releaseDir(dir) {
 }
 
 window.addEventListener("keydown", e => {
-  if (scrolly) return;   // scroll drives the monster; ignore manual input
   if (e.repeat) {
     if (["ArrowRight","ArrowLeft","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
     return;
@@ -662,8 +763,8 @@ window.addEventListener("keydown", e => {
   }
   if (e.key === "ArrowRight" || e.key === "d") { pressDir("right"); e.preventDefault(); }
   if (e.key === "ArrowLeft"  || e.key === "a") { pressDir("left");  e.preventDefault(); }
-  if (e.key === "ArrowUp" || e.key === "w" || e.key === " ") { wantJump = true; e.preventDefault(); }
-  if (e.key === "ArrowDown" || e.key === "s") { keys.down = true; e.preventDefault(); }
+  if (e.key === "ArrowUp" || e.key === "w" || e.key === " ") { wantJump = true; noteManual(); e.preventDefault(); }
+  if (e.key === "ArrowDown" || e.key === "s") { keys.down = true; noteManual(); e.preventDefault(); }
   if (e.key === "e" || e.key === "c") startEat();
 });
 window.addEventListener("keyup", e => {
@@ -683,8 +784,8 @@ function bindHold(id, onDown, onUp) {
 }
 bindHold("btn-left",  () => pressDir("left"),  () => releaseDir("left"));
 bindHold("btn-right", () => pressDir("right"), () => releaseDir("right"));
-bindHold("btn-jump",  () => { wantJump = true; }, () => {});
-bindHold("btn-down",  () => { keys.down = true; }, () => { keys.down = false; });
+bindHold("btn-jump",  () => { wantJump = true; noteManual(); }, () => {});
+bindHold("btn-down",  () => { keys.down = true; noteManual(); }, () => { keys.down = false; });
 
 /* ============================================================
    TELEPORT — level-skip with a *poof* sparkle burst on both ends
@@ -879,6 +980,14 @@ const player = {
   animTime: 0,
 };
 let jumps = 0;   // jumps used since last grounded (max 2 = double jump)
+let finished = false;      // true once the monster crosses the finish flag
+let flagLitAt = 0;         // timestamp the flag lit up (for the glow ramp)
+function showComplete() {
+  document.getElementById("c-score-val").textContent = score;
+  document.getElementById("c-best-val").textContent = hiScore;
+  completeEl.classList.add("show");
+  setTimeout(() => completeEl.classList.remove("show"), 6000);   // auto-dismiss; flag stays lit
+}
 
 /* ============================================================
    HELPERS
@@ -1199,7 +1308,6 @@ function drawPaintedLadies(camX) {
    SHARED SCENERY
    ============================================================ */
 const clouds = Array.from({ length: 30 }, (_, i) => ({ x: ZONE_LEN + i * 480 + rand(i + 5) * 400, y: 40 + rand(i + 11) * 200, s: 0.7 + rand(i + 17) * 1.1 }));
-const flagX = WORLD_LENGTH - 450;
 
 function drawGroundSegment(sxStart, sxEnd, zi, camX) {
   const plate = PLATES[zi];
@@ -1291,7 +1399,7 @@ function drawScene(camX, time) {
   drawGates(camX, "back");
 
   // goal flag
-  drawGoalFlag(camX);
+  drawGoalFlag(camX, time);
 }
 
 // Draw the SPEED BOOST gates at every zone boundary. part="back" draws a seam
@@ -1323,19 +1431,117 @@ function drawGates(camX, part) {
   }
 }
 
-function drawGoalFlag(camX) {
-  const fx = flagX - camX;
-  if (fx > -100 && fx < W + 100) {
-    px(fx, groundY - 260, 8, 260, "#d8dcf0");
-    ctx.fillStyle = "#1e61f0";
-    ctx.beginPath();
-    ctx.moveTo(fx + 8, groundY - 260);
-    ctx.lineTo(fx + 84, groundY - 234);
-    ctx.lineTo(fx + 8, groundY - 208);
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 20px 'Geist Mono', monospace";
-    ctx.fillText("A", fx + 26, groundY - 228);
+/* Finish flag. Placeholder art drawn in code: a pole + a pennant that ripples
+   in the wind (sine along its length); once crossed it "lights up" (bright fill
+   + glow ramp). Swap for a sprite by loading a wave strip + a lit frame and
+   drawing frames here instead — the crossing latch (`finished`) already exists. */
+const flagWave = loadImg("../assets/flag-wave.png");     // optional sprite strip (frames L→R)
+const flagLit  = loadImg("../assets/flag-lit.png");      // optional lit-state frame/strip
+const FLAG = { frames: 6, fps: 10, poleH: 270, screenH: 300 };
+function flagArtReady() { return flagWave.complete && flagWave.naturalWidth > 0; }
+function drawGoalFlag(camX, time) {
+  const fx = FLAG_X - camX;
+  if (fx < -160 || fx > W + 160) return;
+  const baseY = groundY, topY = groundY - FLAG.poleH;
+  const litT = finished ? Math.min(1, (time - flagLitAt) / 600) : 0;
+
+  // sprite path (if art is supplied)
+  if (flagArtReady()) {
+    const img = (finished && flagLit.complete && flagLit.naturalWidth > 0) ? flagLit : flagWave;
+    const fw = img.naturalWidth / (img === flagWave ? FLAG.frames : 1);
+    const dh = FLAG.screenH, dw = fw * (dh / img.naturalHeight);
+    const frame = img === flagWave ? Math.floor(time / 1000 * FLAG.fps) % FLAG.frames : 0;
+    ctx.drawImage(img, frame * fw, 0, fw, img.naturalHeight, fx - 4, baseY - dh, dw, dh);
+    return;
+  }
+
+  // procedural placeholder
+  // pole
+  px(fx, topY, 8, FLAG.poleH, litT > 0 ? "#fff2c2" : "#d8dcf0");
+  // finial
+  ctx.fillStyle = litT > 0 ? "#ffd447" : "#9aa7ff";
+  ctx.beginPath(); ctx.arc(fx + 4, topY - 2, 7, 0, Math.PI * 2); ctx.fill();
+  // rippling pennant
+  const segH = 52, segW = 78;
+  const base = finished ? "#ffd447" : "#1e61f0";
+  if (litT > 0) { ctx.save(); ctx.shadowColor = "rgba(255,212,71,0.8)"; ctx.shadowBlur = 22 * litT; }
+  ctx.fillStyle = base;
+  ctx.beginPath();
+  ctx.moveTo(fx + 8, topY + 6);
+  const N = 8;
+  // top edge — left to right with a travelling ripple
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const wob = Math.sin(time * 0.006 - t * 3.2) * 7 * t;
+    ctx.lineTo(fx + 8 + t * segW, topY + 6 + wob);
+  }
+  // notched right tip
+  ctx.lineTo(fx + 8 + segW - 16, topY + 6 + segH / 2);
+  // bottom edge — right to left
+  for (let i = N; i >= 0; i--) {
+    const t = i / N;
+    const wob = Math.sin(time * 0.006 - t * 3.2) * 7 * t;
+    ctx.lineTo(fx + 8 + t * segW, topY + 6 + segH + wob);
+  }
+  ctx.closePath();
+  ctx.fill();
+  if (litT > 0) ctx.restore();
+  // mark
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 20px 'Geist Mono', monospace";
+  ctx.fillText("A", fx + 24, topY + 6 + segH / 2 + 7);
+}
+
+/* Draw collectibles. Procedural placeholders (spinning coin / faceted diamond)
+   until art lands; if assets/coin.png|diamond.png exist they're used instead.
+   Collected items pop off. */
+function coinArtReady(a) { return a.img.complete && a.img.naturalWidth > 0; }
+function drawCoins(camX, time) {
+  for (let i = 0; i < COINS.length; i++) {
+    const c = COINS[i];
+    if (c.got) continue;
+    const sx = c.x - camX;
+    if (sx < -60 || sx > W + 60) continue;
+    const cy = groundY - c.gy + Math.sin(time * 0.004 + c.x) * 5;   // gentle bob
+    const cfg = c.type === "gem" ? GEM : COIN;
+    if (coinArtReady(cfg)) {
+      const fw = cfg.img.naturalWidth / cfg.frames;
+      const dh = cfg.size, dw = fw * (dh / cfg.img.naturalHeight);
+      const frame = cfg.frames > 1 ? Math.floor(time / 1000 * 10) % cfg.frames : 0;
+      ctx.drawImage(cfg.img, frame * fw, 0, fw, cfg.img.naturalHeight, sx - dw / 2, cy - dh / 2, dw, dh);
+      continue;
+    }
+    // procedural fallback
+    const spin = Math.abs(Math.cos(time * 0.004 + c.x));   // 0..1 → coin edge-on flip
+    if (c.type === "gem") {
+      const r = GEM.size * 0.5;
+      ctx.save();
+      ctx.translate(sx, cy);
+      ctx.fillStyle = "#22d3ee";
+      ctx.beginPath();
+      ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, -r * 0.15); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, -r * 0.15);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      ctx.beginPath();
+      ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, -r * 0.15); ctx.lineTo(0, -r * 0.1);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(4,20,30,0.5)"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, -r * 0.15); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, -r * 0.15);
+      ctx.closePath(); ctx.stroke();
+      ctx.restore();
+    } else {
+      const rw = COIN.size * 0.5 * (0.35 + 0.65 * spin);   // squash to fake a spin
+      const rh = COIN.size * 0.5;
+      ctx.fillStyle = "#ffd447";
+      ctx.beginPath(); ctx.ellipse(sx, cy, rw, rh, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#b8860b"; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(sx, cy, rw, rh, 0, 0, Math.PI * 2); ctx.stroke();
+      if (rw > 5) {
+        ctx.fillStyle = "#fff0b8";
+        ctx.beginPath(); ctx.ellipse(sx - rw * 0.25, cy - rh * 0.3, rw * 0.28, rh * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
   }
 }
 
@@ -1415,7 +1621,7 @@ function loop(now) {
   // horizontal
   let dir = 0;
   let running;
-  if (scrolly) {
+  if (scrolly && !manualDriving()) {
     // scroll-driven: ease player.x toward the target the parent posts; walk
     // when close, run when far so big jumps (nav clicks) read as a sprint.
     const dx = scrollTargetX - player.x;
@@ -1459,6 +1665,10 @@ function loop(now) {
     }
   }
 
+  // while the player is driving in the embed, keep the article target pinned to
+  // the monster (so releasing controls doesn't snap him) and post his position up
+  if (scrolly && manualDriving()) { scrollTargetX = player.x; postWorldX(); }
+
   // vertical — one jump from the ground, one more mid-air (double jump)
   if (wantJump && !ducking) {
     if (grounded) {
@@ -1496,14 +1706,46 @@ function loop(now) {
 
   updateCards(camX);
 
-  // HUD + level progress
+  // collectibles — AABB against the monster's body box
+  if (!teleport) {
+    const feetY = groundY - player.y;
+    const bodyCx = player.x, bodyCy = feetY - PLAYER_H * 0.5;
+    for (let i = 0; i < COINS.length; i++) {
+      const c = COINS[i];
+      if (c.got) continue;
+      const cy = groundY - c.gy;
+      const reach = (c.type === "gem" ? GEM.size : COIN.size) * 0.5 + 44;
+      if (Math.abs(c.x - bodyCx) < reach && Math.abs(cy - bodyCy) < PLAYER_H * 0.5 + reach * 0.5) {
+        c.got = true;
+        score += c.type === "gem" ? GEM_VALUE : COIN_VALUE;
+        bumpHiScore();
+        updateScoreHud();
+        spawnPoof(c.x, cy + PLAYER_H * 0.5);   // burst centered on the coin
+      }
+    }
+  }
+
+  // finish line — cross the flag once → light it up + celebrate. The −8 epsilon
+  // covers scroll-ease stopping a few px short of the target in the embed.
+  if (!finished && player.x >= FLAG_X - 8) {
+    finished = true;
+    flagLitAt = now;
+    bumpHiScore();
+    spawnPoof(FLAG_X, groundY);
+    spawnPoof(FLAG_X + 40, groundY - 120);
+    showComplete();
+  }
+
+  // HUD + level progress (100% at the finish flag, not the raw world end)
   maxX = Math.max(maxX, player.x);
-  hudProgress.textContent = Math.round((player.x / WORLD_LENGTH) * 100) + "%";
+  const prog = Math.max(0, Math.min(100, Math.round((player.x - START_X) / (FLAG_X - START_X) * 100)));
+  hudProgress.textContent = prog + "%";
   updateLevelUI();
 
   drawScene(camX, now);
   if (!teleport) drawPlayer(camX, now);
   drawGates(camX, "front");   // right posts occlude the monster → "through the gate"
+  drawCoins(camX, now);
   updateSparks(dt, camX);
   requestAnimationFrame(loop);
 }

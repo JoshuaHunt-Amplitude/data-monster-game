@@ -148,7 +148,7 @@
   #music-toggle:hover { color: var(--ink); }
 
   /* ============================ STORY (split) ============================ */
-  :root { --stage-w: 42vw; }
+  :root { --stage-w: 50vw; }
   .split { display: flex; align-items: flex-start; border-top: 0.5px solid var(--hairline); }
 
   .editorial {
@@ -775,6 +775,7 @@ function gameScrollSync() {
 addEventListener("scroll", () => {
   if (performance.now() < suppressUntil) return;   // a scroll WE triggered (game-driven) — don't echo it
   lastUserScroll = performance.now();
+  gameScrollTarget = null;                           // reader took over → release the game's scroll follow
   gameScrollSync();
 }, { passive: true });
 // stage-nav clicks: scroll to the chapter (the scroll sync then moves the monster)
@@ -790,11 +791,34 @@ addEventListener("message", e => {
     onGameMode(document.body.classList.contains("mode-game"));
   } else if (d.type === "worldX" && typeof d.worldX === "number") {
     if (!document.body.classList.contains("mode-game") || articleDriving()) return;
-    suppressUntil = performance.now() + 160;
-    window.scrollTo(0, worldXToScrollY(d.worldX));
+    // set a target; a rAF loop eases the article toward it in small steps, so the
+    // scroll glides continuously instead of snapping per message / per anchor.
+    gameScrollTarget = worldXToScrollY(d.worldX);
+    lastWorldXAt = performance.now();
     highlightStage(d.worldX);
   }
 });
+
+// Smoothly follow the monster: ease window scroll toward the game's target with
+// INSTANT scrolls (html{scroll-behavior:smooth} would otherwise animate — and
+// compound — every step, which is what made arrow-key control feel janky).
+let gameScrollTarget = null;
+let lastWorldXAt = 0;
+function gameScrollEase() {
+  if (gameScrollTarget != null) {
+    if (performance.now() - lastWorldXAt > 400) {
+      gameScrollTarget = null;                        // player stopped driving → hand control back
+    } else if (document.body.classList.contains("mode-game") && !articleDriving()) {
+      const cur = window.scrollY, d = gameScrollTarget - cur;
+      if (Math.abs(d) > 0.5) {
+        suppressUntil = performance.now() + 120;
+        window.scrollTo({ top: cur + d * 0.18, behavior: "auto" });
+      }
+    }
+  }
+  requestAnimationFrame(gameScrollEase);
+}
+requestAnimationFrame(gameScrollEase);
 
 // hovering "Read & play game" fades in the Unicorn Studio backdrop and turns
 // the pixel title white — both only while hovering that button.

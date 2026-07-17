@@ -258,19 +258,6 @@
   section.chapter { padding-top: var(--space-section); scroll-margin-top: 8vh; }
   section.chapter:first-of-type { padding-top: 3vh; }
 
-  /* foundations — a full-bleed tinted band rather than a same-weight pipeline
-     step, so it reads as an underlay that supports every stage, not a stage
-     itself. The band bleeds to the viewport edges; the copy stays in-column. */
-  #ch-foundations { position: relative; }
-  #ch-foundations::before {
-    content: "";
-    position: absolute; left: 50%; transform: translateX(-50%);
-    top: -48px; bottom: -48px; width: 100vw;
-    background: linear-gradient(180deg, rgba(59,130,246,0.06), rgba(34,211,238,0.03) 45%, rgba(59,130,246,0.06));
-    border-top: 0.5px solid var(--hairline); border-bottom: 0.5px solid var(--hairline);
-    z-index: -1; pointer-events: none;
-  }
-
   .pull { border-left: 2px solid var(--hairline-strong); padding: 4px 0 4px 24px; margin: 40px 0; }
   .pull q { font-size: clamp(21px, 2.4vw, 26px); font-variation-settings: "wght" 400; line-height: 1.35; color: var(--ink); font-style: normal; quotes: none; letter-spacing: -0.01em; }
   .pull .cite { display: block; margin-top: 16px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; color: var(--ink-tertiary); text-transform: uppercase; }
@@ -282,31 +269,6 @@
   .stat .lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 10px; line-height: 1.5; }
   .stat .was { color: var(--ink-tertiary); text-decoration: line-through; }
   .stat .delta { color: var(--ink-subtle); }
-
-  /* inline stat — a callout figure that lives inside a tactic card rather than
-     a standalone grid strip; the number itself carries the accent gradient so
-     it stands out from surrounding prose without a boxed container. */
-  .stat-lead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 2px 0 16px; }
-  .stat-lead .big {
-    font-family: var(--font-mono); font-size: 21px; font-variation-settings: "wght" 600;
-    letter-spacing: -0.01em; white-space: nowrap;
-    background: linear-gradient(90deg, #3b82f6, #22d3ee);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .stat-lead .lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-subtle); }
-  .stat-lead .delta { color: #22d3ee; }
-
-  /* tactic list — one consistent card treatment for parallel tactics/mechanisms
-     within a chapter, replacing the old mix of standalone h3 blocks and plain
-     bullet lists so related items read as one cohesive, scannable group. */
-  .tactic-list { border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); margin: 28px 0; overflow: hidden; }
-  .tactic-item { padding: 22px 24px; }
-  .tactic-item + .tactic-item { border-top: 0.5px solid var(--hairline); }
-  .tactic-item h4 { font-size: 15px; font-variation-settings: "wght" 590; color: var(--ink); margin-bottom: 8px; letter-spacing: -0.005em; }
-  .tactic-item p { font-size: 15.5px; line-height: 1.62; color: var(--ink-muted); margin-bottom: 0; }
-  .tactic-item p + p { margin-top: 10px; }
-  .tactic-item .stat-lead { margin-top: 2px; }
-  .tactic-item details.toolchain { margin-top: 12px; }
 
   /* receipts — 3× hero stat + grid, restrained */
   .receipts-hero { text-align: center; padding: 44px 20px 36px; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); margin: 32px 0 0.5px; }
@@ -442,6 +404,7 @@
         <h2 class="title">The gates slowing us down</h2>
         <p>Think of software development as a pipeline. An idea becomes code, the code gets validated and reviewed, and then it gets deployed to production. That path is the same whether the change is a one-line bug fix, a new feature release, or a sweeping migration across the codebase. Simple enough. But for us, it slowed down at a few specific steps.</p>
         <div class="diagram" data-diagram="pipeline">
+          <div class="dlabel">The pipeline &middot; Idea &rarr; Code &rarr; Validation &rarr; Review &rarr; Production</div>
           <canvas class="flowviz" data-flow="constrained" aria-label="Changes flowing through the delivery pipeline, bunching up at the manual gates"></canvas>
         </div>
         <p>Before we made a bet on our software factory, most steps in the pipeline were manual. Engineers worked in local environments they had to assemble themselves. Setting one up meant figuring out which dependencies (and the dependencies of dependencies) were needed for testing, then spinning them up. The local frontend alone could take up to 3 minutes to start, and CI runs could stretch beyond 30 minutes. On a bad day, an engineer could lose most of their time just setting up and shipping a single change.</p>
@@ -451,61 +414,58 @@
       </section>
 
       <section class="chapter" id="ch-foundations">
-        <div class="kicker">Underlying every stage, not a stage itself</div>
         <h2 class="title">Rebuilding the foundations</h2>
         <p>When Stripe built their coding agent, they found something interesting: What&rsquo;s good for agents is good for humans, too. We agree.</p>
         <p>But we hadn&rsquo;t made it a priority. For years, we optimized for <em>what</em> we shipped, but agents forced us to finally fix <em>how</em> we ship. Brightside? They also helped us improve much faster than expected.</p>
-        <div class="tactic-list">
-          <div class="tactic-item">
-            <h4>One containerized environment</h4>
-            <div class="stat-lead"><div class="big">3 min &rarr; 28 sec</div><div class="lab">Local app start &middot; <span class="delta">~6&times; faster</span></div></div>
-            <div class="stat-lead"><div class="big">1&ndash;4 days &rarr; 10&ndash;15 min</div><div class="lab">Week 0 setup</div></div>
-            <p>Local setups used to be app-specific. To run the full stack, you had to configure your machine properly across several of them and keep 5+ processes running. Local setup was often unstable and could break with new updates. The first-time setup could take between one to four days and help from multiple colleagues. Now you can run two commands and be set up in 10&ndash;15 minutes. Day to day, you can run one command and have the fullstack app running in around 30 seconds.</p>
-          </div>
-          <div class="tactic-item">
-            <h4>CI from 30 minutes to under 5</h4>
-            <div class="stat-lead"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
-            <div class="stat-lead"><div class="big">40 min &rarr; 15 min</div><div class="lab">Backend CI &middot; <span class="delta">2&ndash;3&times; faster</span></div></div>
-            <p>Our frontend CI had been creeping up for years and began approaching 30 minutes. We tackled it in three ways:</p>
-            <ul class="prose-list">
-              <li><strong>Build only what changed.</strong> We leaned into our Turborepo monorepo setup with affected-based builds, so CI only touches the packages a change actually impacts rather than rebuilding everything. We also compiled packages so their outputs could be cached and reused, and paired that with TypeScript isolated declarations so type info emits per-package without cross-package dependencies. Together, this gave us more cache hits, more parallelism, and fewer redundant rebuilds.</li>
-              <li><strong>Trade JavaScript tooling for Rust and Go.</strong> The single biggest lever was replacing our JS-based toolchain with native equivalents. Nearly every tool got roughly an order of magnitude faster.
-                <details class="toolchain">
-                  <summary>See the full toolchain</summary>
-                  <ul>
-                    <li>TypeScript type checking: <code>tsc &rarr; tsgo</code> (~10&times; faster)</li>
-                    <li>Linting: <code>ESLint &rarr; oxlint</code> (~10&times; faster)</li>
-                    <li>Formatting: <code>Prettier &rarr; oxfmt</code> (~10&times; faster)</li>
-                    <li>Bundling libraries: <code>tsc builds &rarr; tsdown</code> (~10&times; faster)</li>
-                    <li>Bundling apps: <code>esbuild &rarr; rolldown</code> (~2&ndash;3&times; faster)</li>
-                    <li>Testing: <code>Jest &rarr; Vitest</code> + fixed flaky tests (~50% faster)</li>
-                  </ul>
-                </details>
-              </li>
-              <li><strong>Parallelize the pipeline itself.</strong> We restructured the CI pipeline to run independent stages concurrently rather than in sequence, squeezing out the remaining wall-clock time that faster tools alone couldn&rsquo;t recover.</li>
-            </ul>
-            <p>A pipeline that once ran at 30 minutes now finishes at a fraction of that time, with most changes clearing CI before an engineer has finished writing their PR description.</p>
-          </div>
-          <div class="tactic-item">
-            <h4>Automated legacy migrations</h4>
-            <p>We pointed agents at the patterns that confused them most and let them run the migrations themselves. The largest migration was three competing design systems in one codebase: Ant Design, in-house Cerulean, and core-ui (Radix UI + CVA + Tailwind). We&rsquo;re deprecating the first two and standardizing on core-ui. We did the same with i18n, reducing three translation systems into one. Then we codified the changes as agent rules and skills that are backed by lint checks, so agents (and engineers) don&rsquo;t drift back into old patterns. These were migrations we&rsquo;d written off for years, but agents finally made them possible.</p>
-          </div>
+        <div class="stats">
+          <div class="stat"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
+          <div class="stat"><div class="big">40 min &rarr; 15 min</div><div class="lab">Backend CI &middot; <span class="delta">2&ndash;3&times; faster</span></div></div>
+          <div class="stat"><div class="big">3 min &rarr; 28 sec</div><div class="lab">Local app start &middot; <span class="delta">~6&times; faster</span></div></div>
+          <div class="stat"><div class="big">1&ndash;4 days &rarr; 10&ndash;15 min</div><div class="lab">Week 0 setup</div></div>
+        </div>
+        <div class="block">
+          <h3>One containerized environment</h3>
+          <p>Local setups used to be app-specific. To run the full stack, you had to configure your machine properly across several of them and keep 5+ processes running. Local setup was often unstable and could break with new updates. The first-time setup could take between one to four days and help from multiple colleagues. Now you can run two commands and be set up in 10&ndash;15 minutes. Day to day, you can run one command and have the fullstack app running in around 30 seconds.</p>
+        </div>
+        <div class="block">
+          <h3>CI from 30 minutes to under 5</h3>
+          <p>Our frontend CI had been creeping up for years and began approaching 30 minutes. We tackled it in three ways:</p>
+          <ul class="prose-list">
+            <li><strong>Build only what changed.</strong> We leaned into our Turborepo monorepo setup with affected-based builds, so CI only touches the packages a change actually impacts rather than rebuilding everything. We also compiled packages so their outputs could be cached and reused, and paired that with TypeScript isolated declarations so type info emits per-package without cross-package dependencies. Together, this gave us more cache hits, more parallelism, and fewer redundant rebuilds.</li>
+            <li><strong>Trade JavaScript tooling for Rust and Go.</strong> The single biggest lever was replacing our JS-based toolchain with native equivalents. Nearly every tool got roughly an order of magnitude faster.
+              <details class="toolchain">
+                <summary>See the full toolchain</summary>
+                <ul>
+                  <li>TypeScript type checking: <code>tsc &rarr; tsgo</code> (~10&times; faster)</li>
+                  <li>Linting: <code>ESLint &rarr; oxlint</code> (~10&times; faster)</li>
+                  <li>Formatting: <code>Prettier &rarr; oxfmt</code> (~10&times; faster)</li>
+                  <li>Bundling libraries: <code>tsc builds &rarr; tsdown</code> (~10&times; faster)</li>
+                  <li>Bundling apps: <code>esbuild &rarr; rolldown</code> (~2&ndash;3&times; faster)</li>
+                  <li>Testing: <code>Jest &rarr; Vitest</code> + fixed flaky tests (~50% faster)</li>
+                </ul>
+              </details>
+            </li>
+            <li><strong>Parallelize the pipeline itself.</strong> We restructured the CI pipeline to run independent stages concurrently rather than in sequence, squeezing out the remaining wall-clock time that faster tools alone couldn&rsquo;t recover.</li>
+          </ul>
+          <p>A pipeline that once ran at 30 minutes now finishes at a fraction of that time, with most changes clearing CI before an engineer has finished writing their PR description.</p>
+        </div>
+        <div class="block">
+          <h3>Automated legacy migrations</h3>
+          <p>We pointed agents at the patterns that confused them most and let them run the migrations themselves. The largest migration was three competing design systems in one codebase: Ant Design, in-house Cerulean, and core-ui (Radix UI + CVA + Tailwind). We&rsquo;re deprecating the first two and standardizing on core-ui. We did the same with i18n, reducing three translation systems into one. Then we codified the changes as agent rules and skills that are backed by lint checks, so agents (and engineers) don&rsquo;t drift back into old patterns. These were migrations we&rsquo;d written off for years, but agents finally made them possible.</p>
         </div>
       </section>
 
       <section class="chapter" id="ch-develop">
         <h2 class="title">How we develop now</h2>
         <p>Improving our developer experience, or <span class="tip" data-tip="The tools, environments, processes, and workflows that shape how easily engineers can go from idea to shipped code.">DevEx</span>, changed how people code in expected and unexpected ways. DevEx is the whole path an engineer travels from idea to shipped: the tools, the environments, and every step in between. The obvious: Agents write a lot of code now. More surprising: Where that code gets written.</p>
-        <div class="tactic-list">
-          <div class="tactic-item">
-            <h4>Agent-generated code</h4>
-            <p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor, Codex, and Claude Code agents. Nearly all frontend code and most backend code is now agent generated.</p>
-          </div>
-          <div class="tactic-item">
-            <h4>CI as our new dev environment</h4>
-            <p>Once frontend CI dropped to under 5 minutes, working locally was no longer the fast option. Engineers now push a branch, let CI run, and review it in GitHub. The CI went from the gate you clear after you build something to the new dev environment for most engineers.</p>
-            <p>This lets engineers parallelize their work. Because it runs in the cloud, they aren&rsquo;t limited to one change at a time. They can kick off 20 PRs before logging off and review them the next morning. The only limit is knowing what to build, which is why a migration might hit 100 PRs, while feature development stays around 1&ndash;3.</p>
-          </div>
+        <div class="block">
+          <h3>Agent-generated code</h3>
+          <p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor, Codex, and Claude Code agents. Nearly all frontend code and most backend code is now agent generated.</p>
+        </div>
+        <div class="block">
+          <h3>CI as our new dev environment</h3>
+          <p>Once frontend CI dropped to under 5 minutes, working locally was no longer the fast option. Engineers now push a branch, let CI run, and review it in GitHub. The CI went from the gate you clear after you build something to the new dev environment for most engineers.</p>
+          <p>This lets engineers parallelize their work. Because it runs in the cloud, they aren&rsquo;t limited to one change at a time. They can kick off 20 PRs before logging off and review them the next morning. The only limit is knowing what to build, which is why a migration might hit 100 PRs, while feature development stays around 1&ndash;3.</p>
         </div>
       </section>
 
@@ -514,18 +474,16 @@
         <p>Validation is where we confirm a change does what it&rsquo;s supposed to do. Every change gets validated before it ships, but it was slow. Spinning up the test build used to take 25 minutes, which was long enough that you&rsquo;d start another task while you waited, then lose time and focus switching back and forth.</p>
         <p>So we made it faster. Automated checks handle most of it, but some things you only catch by trying the change yourself. For that, you can ship a PR and get a working preview in a couple of minutes with no local setup.</p>
         <div class="diagram" data-diagram="gate-validation">
-          <div class="dlabel">Opening the Validation gate</div>
+          <div class="dlabel">Unlocking the Validation gate</div>
           <canvas class="flowviz" data-flow="open-validate" aria-label="The Validation gate opens and changes stop piling up behind it"></canvas>
         </div>
-        <div class="tactic-list">
-          <div class="tactic-item">
-            <h4>Frontend previews</h4>
-            <p>For a frontend change, the built assets go up to S3 and load as a working copy of the app. It comes with dev tools to flip feature flags and settings, and a deep verification link straight to the page your change affects. Checking a change takes 2&ndash;5 minutes of click-through with no local setup needed.</p>
-          </div>
-          <div class="tactic-item">
-            <h4>Backend ephemerals</h4>
-            <p>Backend changes get validated through ephemerals. Add a tag to a PR and it spins up a throwaway copy of the full stack, where an engineer or an agent can hit the APIs or run the feature end to end before it merges. It takes 10 to 15 minutes to spin up.</p>
-          </div>
+        <div class="block">
+          <h3>Frontend previews</h3>
+          <p>For a frontend change, the built assets go up to S3 and load as a working copy of the app. It comes with dev tools to flip feature flags and settings, and a deep verification link straight to the page your change affects. Checking a change takes 2&ndash;5 minutes of click-through with no local setup needed.</p>
+        </div>
+        <div class="block">
+          <h3>Backend ephemerals</h3>
+          <p>Backend changes get validated through ephemerals. Add a tag to a PR and it spins up a throwaway copy of the full stack, where an engineer or an agent can hit the APIs or run the feature end to end before it merges. It takes 10 to 15 minutes to spin up.</p>
         </div>
       </section>
 
@@ -534,24 +492,22 @@
         <p>Engineers used to spend a big part of their day reviewing other people&rsquo;s changes, or waiting on someone to review theirs. Across the team, review was one of the slowest steps in the pipeline.</p>
         <p>We changed that by raising our confidence in the code before it reaches review. Stronger linting rules and a design system that handles most of the complexity now cover a lot of what a reviewer used to check by hand. On top of that, an automated reviewer runs on every PR, and a risk model approves the low-risk changes on its own.</p>
         <p><strong>The average PR is now approved and merged 4.5x faster.</strong></p>
-        <div class="stat-lead"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div>
+        <div class="stats"><div class="stat"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div></div>
         <div class="diagram" data-diagram="gate-review">
-          <div class="dlabel">Opening the Review gate</div>
+          <div class="dlabel">Unlocking the Review gate</div>
           <canvas class="flowviz" data-flow="open-review" aria-label="Low-risk changes flow straight through as the Review and approval gates open"></canvas>
         </div>
-        <div class="tactic-list">
-          <div class="tactic-item">
-            <h4>Automated code review</h4>
-            <p>We use Cursor&rsquo;s Bugbot on every PR in CI. It comes out of the box, and we add context when it misses things. So far, it catches bugs that most humans used to let through. Even though we&rsquo;ve tripled the PRs we ship, bug reports have fallen by more than half (from 715 a month to 319), and high-priority issue reports have also dropped. More code hasn&rsquo;t meant worse code, and Bugbot is a large reason why.</p>
-          </div>
-          <div class="tactic-item">
-            <h4>Risk-based auto-approval</h4>
-            <p>We introduced a risk model that scores each change on size, scope, what part of the codebase it touches, test coverage, and whether it modifies public APIs or data models. If a change is low-risk and review comments are resolved, it merges on its own without a human in the loop. When someone catches a change that shouldn&rsquo;t have merged, it goes into an eval suite, and we tune the risk model so it doesn&rsquo;t happen again.</p>
-          </div>
-          <div class="tactic-item">
-            <h4>SOC2 compliance</h4>
-            <p>How does auto-approval pass a SOC2 audit? Turns out, SOC2 doesn&rsquo;t need a human to click approve. What it does need is demonstrable controls: documented criteria, logged decisions, and a way to override. So we documented all of it, including what qualifies for auto-approval, what still needs a human, and how someone escalates. Approval and validation are separately logged signals, so every decision can be audited after the fact. We brought compliance in early so we didn&rsquo;t have to redesign it later.</p>
-          </div>
+        <div class="block">
+          <h3>Automated code review</h3>
+          <p>We use Cursor&rsquo;s Bugbot on every PR in CI. It comes out of the box, and we add context when it misses things. So far, it catches bugs that most humans used to let through. Even though we&rsquo;ve tripled the PRs we ship, bug reports have fallen by more than half (from 715 a month to 319), and high-priority issue reports have also dropped. More code hasn&rsquo;t meant worse code, and Bugbot is a large reason why.</p>
+        </div>
+        <div class="block">
+          <h3>Risk-based auto-approval</h3>
+          <p>We introduced a risk model that scores each change on size, scope, what part of the codebase it touches, test coverage, and whether it modifies public APIs or data models. If a change is low-risk and review comments are resolved, it merges on its own without a human in the loop. When someone catches a change that shouldn&rsquo;t have merged, it goes into an eval suite, and we tune the risk model so it doesn&rsquo;t happen again.</p>
+        </div>
+        <div class="block">
+          <h3>SOC2 compliance</h3>
+          <p>How does auto-approval pass a SOC2 audit? Turns out, SOC2 doesn&rsquo;t need a human to click approve. What it does need is demonstrable controls: documented criteria, logged decisions, and a way to override. So we documented all of it, including what qualifies for auto-approval, what still needs a human, and how someone escalates. Approval and validation are separately logged signals, so every decision can be audited after the fact. We brought compliance in early so we didn&rsquo;t have to redesign it later.</p>
         </div>
       </section>
 
@@ -567,7 +523,7 @@
         </div>
         <div class="block">
           <h3>Let anyone ship</h3>
-          <div class="stat-lead"><div class="big">~5%</div><div class="lab">Non-engineer PRs</div></div>
+          <div class="stats"><div class="stat"><div class="big">~5%</div><div class="lab">Non-engineer PRs</div></div></div>
           <p>The biggest positive was handing over the keys to the kingdom and letting non-engineers ship code. Designers, PMs, and even marketers use Claude and Cursor to fix bugs and make frontend improvements.</p>
           <p>The best part is that they happen much faster because there&rsquo;s no more handoff to eng. And the fixes are often better because the person closest to the problem makes the fix. Jingshu Zhao, Principal Designer at Amplitude, started with a small PR for a button-alignment issue. Soon after, she used Claude Code to reorganize our navigation and sunset low-usage sections.</p>
           <p>Although non-engineers only make up 5% of our PRs right now, they&rsquo;re high-value changes, and that number continues to grow.</p>
@@ -586,7 +542,7 @@
       </section>
 
       <section class="chapter" id="ch-receipts">
-        <h2 class="title">The final score</h2>
+        <h2 class="title">The receipts</h2>
         <div class="receipts-hero">
           <div class="big">3&times;</div>
           <div class="lab">more PRs shipped</div>
@@ -820,7 +776,7 @@ const TOC = [
   ["ch-validation", "Gate 1: Validation"],
   ["ch-review", "Gate 2: Review & approval"],
   ["ch-culture", "A culture of AI transformation"],
-  ["ch-receipts", "The final score"],
+  ["ch-receipts", "The receipts"],
 ];
 const tocOl = document.querySelector("#toc ol");
 TOC.forEach(([id, label], i) => {
@@ -916,16 +872,10 @@ const FLOW_OPEN = {
 const FLOW_C = {
   edge: "rgba(138,143,152,0.24)",
   ink: "#d0d6e0", dim: "#4a4e57", sub: "#8a8f98", green: "#3fb950",
-  gradA: "#3b82f6", gradB: "#22d3ee",   // same blue→cyan gradient as the TOC progress rail
+  parts: ["#6d7be8", "#4a90d9", "#3fb64f", "#d1a24a"],   // change types (data-viz palette)
 };
-function lerpHex(a, b, t) {
-  const h = (s, i) => parseInt(s.slice(1 + i * 2, 3 + i * 2), 16);
-  const m = (i) => Math.round(h(a, i) + (h(b, i) - h(a, i)) * t);
-  return `rgb(${m(0)},${m(1)},${m(2)})`;
-}
 
-function makeFlow(canvas, openKeys, opts = {}) {
-  const showLabels = opts.showLabels !== false;
+function makeFlow(canvas, openKeys) {
   const ctx = canvas.getContext("2d");
   const stages = FLOW_STAGES.map((s, i) => ({ ...s, i, open: s.gate ? openKeys.includes(s.key) : true }));
   const gates = stages.filter((s) => s.gate);
@@ -955,7 +905,7 @@ function makeFlow(canvas, openKeys, opts = {}) {
   const baseV = () => W / 3.6;
 
   function spawn() {
-    particles.push({ x: -6, lane: Math.random() * 2 - 1, ph: Math.random() * 6.28, r: 2.1 + Math.random() * 1.3 });
+    particles.push({ x: -6, lane: Math.random() * 2 - 1, col: FLOW_C.parts[(Math.random() * FLOW_C.parts.length) | 0], ph: Math.random() * 6.28, r: 2.1 + Math.random() * 1.3 });
   }
   function tick(now) {
     if (!t0) t0 = now;
@@ -974,11 +924,8 @@ function makeFlow(canvas, openKeys, opts = {}) {
   function draw(now) {
     ctx.clearRect(0, 0, W, H);
     const x0 = nodeX[0], x1 = nodeX[nodeX.length - 1];
-    // ribbon silhouette — the same blue→cyan gradient as the TOC progress rail
-    const ribbonGrad = ctx.createLinearGradient(x0, 0, x1, 0);
-    ribbonGrad.addColorStop(0, FLOW_C.gradA);
-    ribbonGrad.addColorStop(1, FLOW_C.gradB);
-    ctx.strokeStyle = ribbonGrad; ctx.lineWidth = 1; ctx.globalAlpha = 0.55;
+    // ribbon silhouette
+    ctx.strokeStyle = FLOW_C.edge; ctx.lineWidth = 1;
     for (const sign of [-1, 1]) {
       ctx.beginPath();
       for (let x = x0; x <= x1; x += 4) {
@@ -987,14 +934,12 @@ function makeFlow(canvas, openKeys, opts = {}) {
       }
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
-    // packets — colored by how far along the pipeline they are (blue → cyan)
+    // packets
     for (const p of particles) {
       const hh = halfH(p.x);
       const y = cy + p.lane * hh + Math.sin(now / 500 + p.ph) * 1.1;
-      const t = Math.max(0, Math.min(1, (p.x - x0) / (x1 - x0)));
       ctx.beginPath(); ctx.arc(p.x, y, p.r, 0, 6.2832);
-      ctx.fillStyle = lerpHex(FLOW_C.gradA, FLOW_C.gradB, t); ctx.globalAlpha = 0.92; ctx.fill();
+      ctx.fillStyle = p.col; ctx.globalAlpha = 0.92; ctx.fill();
     }
     ctx.globalAlpha = 1;
     // gate posts
@@ -1004,21 +949,18 @@ function makeFlow(canvas, openKeys, opts = {}) {
       ctx.beginPath(); ctx.moveTo(x, cy - hh - 9); ctx.lineTo(x, cy - hh - 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x, cy + hh + 2); ctx.lineTo(x, cy + hh + 9); ctx.stroke();
     }
-    // stage labels — a playhead lights each up in turn (skipped on the first
-    // diagram, which shows only the flow + the two bottleneck gates)
-    if (showLabels) {
-      const active = Math.floor(((now - t0) / 1100) % stages.length);
-      ctx.textAlign = "center";
-      const labelY = cy + RH + 26;
-      for (const s of stages) {
-        const x = nodeX[s.i];
-        ctx.fillStyle = FLOW_C.dim; ctx.fillRect(x - 1.5, cy - 1.5, 3, 3);
-        let col = s.gate ? (s.open ? FLOW_C.green : FLOW_C.sub) : FLOW_C.dim;
-        if (s.i === active) col = FLOW_C.ink;
-        ctx.fillStyle = col;
-        ctx.font = (s.i === active ? "600 " : "") + "10px ui-monospace, SFMono-Regular, monospace";
-        ctx.fillText(s.label.toUpperCase(), x, labelY);
-      }
+    // stage labels — a playhead lights each up in turn
+    const active = Math.floor(((now - t0) / 1100) % stages.length);
+    ctx.textAlign = "center";
+    const labelY = cy + RH + 26;
+    for (const s of stages) {
+      const x = nodeX[s.i];
+      ctx.fillStyle = FLOW_C.dim; ctx.fillRect(x - 1.5, cy - 1.5, 3, 3);
+      let col = s.gate ? (s.open ? FLOW_C.green : FLOW_C.sub) : FLOW_C.dim;
+      if (s.i === active) col = FLOW_C.ink;
+      ctx.fillStyle = col;
+      ctx.font = (s.i === active ? "600 " : "") + "10px ui-monospace, SFMono-Regular, monospace";
+      ctx.fillText(s.label.toUpperCase(), x, labelY);
     }
   }
 
@@ -1031,9 +973,7 @@ function makeFlow(canvas, openKeys, opts = {}) {
 // instantiate each diagram; only animate while it's on screen
 document.querySelectorAll("canvas.flowviz").forEach((cv) => {
   const openKeys = FLOW_OPEN[cv.dataset.flow] || [];
-  // the first diagram (ch-gates) shows only the flow + the two bottleneck
-  // gates — no cycling stage labels, since nothing there is "opening" yet
-  const viz = makeFlow(cv, openKeys, { showLabels: cv.dataset.flow !== "constrained" });
+  const viz = makeFlow(cv, openKeys);
   const io = new IntersectionObserver((es) => {
     es.forEach((e) => (e.isIntersecting ? viz.start() : viz.stop()));
   }, { threshold: 0.15 });

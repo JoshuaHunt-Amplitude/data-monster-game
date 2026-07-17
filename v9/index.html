@@ -704,7 +704,7 @@ const LEVEL_ANCHORS = [
   { id: "ch-foundations", worldX: 5400 },   // CODE
   { id: "ch-validation",  worldX: 9000 },   // VALIDATION
   { id: "ch-review",      worldX: 12600 },  // REVIEW
-  { id: "ch-receipts",    worldX: 17400 },  // PRODUCTION
+  { id: "ch-receipts",    worldX: 17550 },  // PRODUCTION — matches FLAG_X so scrolling to the end hits 100%
 ];
 let gameReady = false;
 let applyMusicMode = () => {};   // set up by the music block below; no-op until then
@@ -715,6 +715,41 @@ function onGameMode(on) {
   if (on) gameScrollSync();
 }
 const stageNavBtns = [...document.querySelectorAll("#stage-nav button")];
+// Bidirectional sync ownership: the reader scrolling the article and the player
+// driving the monster both move the pair. Last interaction wins for ~500ms so the
+// two directions never fight. `suppressUntil` skips the scroll events WE trigger
+// (game-driven), so a game-driven scroll isn't echoed back as a progress message.
+let lastUserScroll = -1e9;
+let suppressUntil = 0;
+function articleDriving() { return performance.now() - lastUserScroll < 500; }
+function anchorAbsTop(id) { const el = document.getElementById(id); return el ? el.getBoundingClientRect().top + window.scrollY : 0; }
+function highlightStage(worldX) {
+  const A = LEVEL_ANCHORS; let active = 0;
+  for (let i = 0; i < A.length; i++) if (worldX >= A[i].worldX) active = i;
+  if (active < A.length - 1) {
+    const t = (worldX - A[active].worldX) / (A[active + 1].worldX - A[active].worldX);
+    if (t >= 0.5) active += 1;
+  }
+  stageNavBtns.forEach((b, i) => b.classList.toggle("active", i === active));
+}
+// invert the anchor map: monster world-x → the scrollY that parks that anchor on
+// the reference line, so the article follows the player.
+function worldXToScrollY(wx) {
+  const refOff = innerHeight * 0.45;
+  const A = LEVEL_ANCHORS;
+  const maxY = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+  let y = window.scrollY;
+  if (wx <= A[0].worldX) y = anchorAbsTop(A[0].id) - refOff;
+  else if (wx >= A[A.length - 1].worldX) y = anchorAbsTop(A[A.length - 1].id) - refOff;
+  else for (let i = 0; i < A.length - 1; i++) {
+    if (wx >= A[i].worldX && wx < A[i + 1].worldX) {
+      const t = (wx - A[i].worldX) / (A[i + 1].worldX - A[i].worldX);
+      const y0 = anchorAbsTop(A[i].id), y1 = anchorAbsTop(A[i + 1].id);
+      y = y0 + (y1 - y0) * t - refOff; break;
+    }
+  }
+  return Math.max(0, Math.min(maxY, y));
+}
 function gameScrollSync() {
   if (!document.body.classList.contains("mode-game")) return;
   const refY = innerHeight * 0.45;   // viewport reference line the anchors cross
@@ -737,16 +772,27 @@ function gameScrollSync() {
   postToGame({ type: "progress", worldX });
   stageNavBtns.forEach((b, i) => b.classList.toggle("active", i === active));
 }
-addEventListener("scroll", gameScrollSync, { passive: true });
+addEventListener("scroll", () => {
+  if (performance.now() < suppressUntil) return;   // a scroll WE triggered (game-driven) — don't echo it
+  lastUserScroll = performance.now();
+  gameScrollSync();
+}, { passive: true });
 // stage-nav clicks: scroll to the chapter (the scroll sync then moves the monster)
 stageNavBtns.forEach(b => b.addEventListener("click", () => {
   document.getElementById(b.dataset.anchor)?.scrollIntoView({ behavior: "smooth" });
 }));
-// the game announces readiness on load — (re)send the current mode + position
+// the game announces readiness on load, and posts its world-x while the player
+// drives it — move the article to follow (unless the reader is scrolling).
 addEventListener("message", e => {
-  if (e.data && e.data.type === "game-ready") {
+  const d = e.data || {};
+  if (d.type === "game-ready") {
     gameReady = true;
     onGameMode(document.body.classList.contains("mode-game"));
+  } else if (d.type === "worldX" && typeof d.worldX === "number") {
+    if (!document.body.classList.contains("mode-game") || articleDriving()) return;
+    suppressUntil = performance.now() + 160;
+    window.scrollTo(0, worldXToScrollY(d.worldX));
+    highlightStage(d.worldX);
   }
 });
 

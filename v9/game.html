@@ -367,6 +367,8 @@
   body.scrolly #level-nav,
   body.scrolly #minimap,
   body.scrolly #minimap-hint { display: none !important; }
+  /* ...but when fullscreen "play with arrows" is on, show the controls overlay */
+  body.scrolly.keys-on #controls-hint { display: block !important; }
 </style>
 
 <div id="title-card">
@@ -785,8 +787,14 @@ window.addEventListener("message", e => {
   else if (d.type === "eat") startEat();
   // W key in the parent → jump (mirrors click-to-jump in the embed)
   else if (d.type === "jump") { if (started && !teleport && eating <= 0) wantJump = true; }
-  // "Play with arrows" toggle (future) enables manual keyboard control in the embed
-  else if (d.type === "enableKeys") keysEnabled = !!d.on;
+  // fullscreen "play with arrows" — enable keyboard control + show the controls
+  // overlay (it fades on first move); disabling hides it again.
+  else if (d.type === "enableKeys") {
+    keysEnabled = !!d.on;
+    document.body.classList.toggle("keys-on", keysEnabled);
+    if (keysEnabled) { hasMoved = false; controlsHint.classList.add("show"); }
+    else controlsHint.classList.remove("show");
+  }
 });
 // tell the parent we're ready so it can (re)send the mode + first target
 try { parent.postMessage({ type: "game-ready" }, "*"); } catch (e) {}
@@ -1434,7 +1442,7 @@ function loop(now) {
   // horizontal
   let dir = 0;
   let running;
-  if (scrolly && !manualDriving() && !teleport) {
+  if (scrolly && !keysEnabled && !manualDriving() && !teleport) {
     // scroll-driven: ease player.x toward the target the parent posts; walk
     // when close, run when far so big jumps (nav clicks) read as a sprint.
     const dx = scrollTargetX - player.x;

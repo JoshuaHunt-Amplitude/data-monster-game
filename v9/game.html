@@ -304,6 +304,17 @@
   }
   #complete .c-score { font-family: var(--font-mono); font-size: 14px; letter-spacing: 1.5px; margin-top: 14px; color: rgba(238,240,255,0.85); }
   #complete .c-score b { color: #ffd447; }
+  #complete #c-again {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 1px;
+    margin-top: 20px; pointer-events: auto; cursor: pointer;
+    background: #ffd447; color: #0b0524; border: 0; border-radius: 6px; padding: 10px 24px;
+    font-family: var(--font-mono);
+    transition: transform 0.06s ease, filter 0.15s ease;
+  }
+  #complete #c-again .ca-main { font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  #complete #c-again .ca-sub { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(11,5,36,0.65); }
+  #complete #c-again:hover { filter: brightness(1.08); }
+  #complete #c-again:active { transform: translateY(1px); }
 
   #touch-controls { display: none; }
   @media (pointer: coarse) {
@@ -391,6 +402,10 @@
   <div class="c-time"><b id="c-time-val">0.000</b></div>
   <div class="c-best">BEST TIME <span id="c-best-time">—</span></div>
   <div class="c-score">SCORE <b id="c-score-val">0</b> &nbsp;·&nbsp; BEST <span id="c-best-val">0</span></div>
+  <button id="c-again">
+    <span class="ca-main">↻ Play again</span>
+    <span class="ca-sub">try to beat your score</span>
+  </button>
 </div>
 
 <div id="touch-controls">
@@ -1084,8 +1099,7 @@ function showComplete() {
   document.getElementById("c-best-time").textContent = fmtTime(bestMs || runMs);
   document.getElementById("c-score-val").textContent = score;
   document.getElementById("c-best-val").textContent = hiScore;
-  completeEl.classList.add("show");
-  setTimeout(() => completeEl.classList.remove("show"), 6000);   // auto-dismiss; flag stays lit
+  completeEl.classList.add("show");   // stays up (has a Play again button); resetRun() dismisses it
 }
 
 // Fresh playthrough — reset position, score, timer, coins, gates, flag (keeps
@@ -1099,6 +1113,8 @@ function resetRun() {
   updateScoreHud();
   completeEl.classList.remove("show");
 }
+// "Play again" on the completion card → fresh run from the start
+document.getElementById("c-again").addEventListener("click", resetRun);
 
 /* ============================================================
    HELPERS

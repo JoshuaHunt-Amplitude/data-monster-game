@@ -1040,9 +1040,11 @@ function lerpHex(a, b, t) {
 
 function makeFlow(canvas, openKeys) {
   const ctx = canvas.getContext("2d");
-  const stages = FLOW_STAGES.map((s, i) => ({ ...s, i, open: s.gate ? openKeys.includes(s.key) : true }));
+  // targetOpen = the gate's final state; openAmt animates 0 (locked/red/pinched)
+  // → 1 (open/green/flowing) on appearance so the diagram plays the gate opening.
+  const stages = FLOW_STAGES.map((s, i) => ({ ...s, i, targetOpen: s.gate ? openKeys.includes(s.key) : true, openAmt: 0 }));
   const gates = stages.filter((s) => s.gate);
-  let W = 0, H = 0, cy = 0, RH = 0, nodeX = [], dpr = 1, particles = [], lastT = 0, spawnAcc = 0, running = false, t0 = 0, labelFS = 11;
+  let W = 0, H = 0, cy = 0, RH = 0, nodeX = [], dpr = 1, particles = [], lastT = 0, spawnAcc = 0, running = false, t0 = 0, appearT = 0, labelFS = 11;
 
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1074,9 +1076,11 @@ function makeFlow(canvas, openKeys) {
   resize();
 
   const SIGMA = 32, NECK = 0.14;
-  function pinch(x) {                 // 0..1 influence of the nearest LOCKED gate
+  const ANIM_DELAY = 800, ANIM_DUR = 1200;                    // wait, then open
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);  // easeInOutCubic
+  function pinch(x) {                 // 0..1 pinch from gates, scaled by how locked each still is
     let m = 0;
-    for (const g of gates) { if (g.open) continue; const gx = nodeX[g.i]; m = Math.max(m, Math.exp(-((x - gx) ** 2) / (2 * SIGMA * SIGMA))); }
+    for (const g of gates) { const gx = nodeX[g.i]; m = Math.max(m, (1 - g.openAmt) * Math.exp(-((x - gx) ** 2) / (2 * SIGMA * SIGMA))); }
     return m;
   }
   const halfH = (x) => RH * (1 - (1 - NECK) * pinch(x));
@@ -1087,6 +1091,10 @@ function makeFlow(canvas, openKeys) {
   }
   function tick(now) {
     if (!t0) t0 = now;
+    if (!appearT) appearT = now;
+    // drive each gate's open amount along the delay → duration timeline
+    const e = ease(Math.max(0, Math.min(1, (now - appearT - ANIM_DELAY) / ANIM_DUR)));
+    for (const g of gates) g.openAmt = g.targetOpen ? e : 0;
     const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0; lastT = now;
     spawnAcc += dt;
     while (spawnAcc > 0.09 && particles.length < 130) { spawnAcc -= 0.09; spawn(); }
@@ -1108,7 +1116,7 @@ function makeFlow(canvas, openKeys) {
     ctx.setLineDash([3, 6]); ctx.lineWidth = 1;
     for (const s of stages) {
       const x = nodeX[s.i];
-      if (s.gate) { ctx.strokeStyle = s.open ? FLOW_C.green : FLOW_C.red; ctx.globalAlpha = 0.72; }
+      if (s.gate) { ctx.strokeStyle = lerpHex(FLOW_C.red, FLOW_C.green, s.openAmt); ctx.globalAlpha = 0.72; }
       else { ctx.strokeStyle = FLOW_C.ribbon; ctx.globalAlpha = 0.26; }
       ctx.beginPath(); ctx.moveTo(x, dashTop); ctx.lineTo(x, dashBot); ctx.stroke();
     }
@@ -1140,7 +1148,7 @@ function makeFlow(canvas, openKeys) {
     ctx.letterSpacing = "0.02em";
     for (const s of stages) {
       const x = nodeX[s.i];
-      ctx.fillStyle = s.gate ? (s.open ? FLOW_C.green : FLOW_C.red) : FLOW_C.white;
+      ctx.fillStyle = s.gate ? lerpHex(FLOW_C.red, FLOW_C.green, s.openAmt) : FLOW_C.white;
       ctx.textAlign = "center";
       ctx.fillText(s.label.toUpperCase(), x, labelY);
     }
@@ -1148,7 +1156,7 @@ function makeFlow(canvas, openKeys) {
   }
 
   return {
-    start() { if (!running) { running = true; lastT = 0; requestAnimationFrame(step); } },
+    start() { if (!running) { running = true; lastT = 0; appearT = 0; requestAnimationFrame(step); } },
     stop() { running = false; },
     tick,   // exposed for deterministic frame-driving during testing
   };

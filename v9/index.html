@@ -155,17 +155,17 @@
 
   /* bottom-of-page easter egg: Data Monster + cookie pops up → click for fullscreen play */
   #fs-nudge {
-    position: fixed; left: 50%; bottom: 16px; transform: translate(-50%, 180%);
+    position: fixed; left: 24px; bottom: 58px; transform: translateY(180%);
     z-index: 62; display: flex; align-items: center; gap: 14px;
     padding: 6px; background: transparent; border: 0; cursor: pointer;
     opacity: 0; pointer-events: none;
     transition: transform 0.5s cubic-bezier(.2,.85,.25,1), opacity 0.4s ease;
   }
-  #fs-nudge.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+  #fs-nudge.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
   #fs-nudge .fs-mon {
     width: 60px; height: 74px; flex: none;
     background: url(../assets/datamonster-eat.png) no-repeat;
-    background-size: 600px 74px; background-position: -300px 0;   /* one frame (with the cookie) */
+    background-size: 600px 74px; background-position: -360px 0;   /* eat frame 6 — holding the cookie */
     image-rendering: pixelated;
     filter: drop-shadow(0 5px 9px rgba(0,0,0,0.55));
     transition: transform 0.2s ease;
@@ -912,10 +912,11 @@ addEventListener("scroll", () => {
     fsNudge.classList.remove("show");
   }
 }, { passive: true });
-// click → fullscreen the game + hand it arrow-key control (with the controls overlay)
+// click → fullscreen the game, restart from the beginning + hand it arrow-key control
 fsNudge.addEventListener("click", () => {
   const req = gameFrame.requestFullscreen || gameFrame.webkitRequestFullscreen;
   if (req) { try { req.call(gameFrame); } catch (e) {} }
+  postToGame({ type: "restart" });
   postToGame({ type: "enableKeys", on: true });
   try { gameFrame.contentWindow.focus(); } catch (e) {}
 });

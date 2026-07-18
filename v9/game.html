@@ -787,6 +787,8 @@ window.addEventListener("message", e => {
   else if (d.type === "eat") startEat();
   // W key in the parent → jump (mirrors click-to-jump in the embed)
   else if (d.type === "jump") { if (started && !teleport && eating <= 0) wantJump = true; }
+  // fullscreen play → start a fresh run from the beginning
+  else if (d.type === "restart") resetRun();
   // fullscreen "play with arrows" — enable keyboard control + show the controls
   // overlay (it fades on first move); disabling hides it again.
   else if (d.type === "enableKeys") {
@@ -1084,6 +1086,18 @@ function showComplete() {
   document.getElementById("c-best-val").textContent = hiScore;
   completeEl.classList.add("show");
   setTimeout(() => completeEl.classList.remove("show"), 6000);   // auto-dismiss; flag stays lit
+}
+
+// Fresh playthrough — reset position, score, timer, coins, gates, flag (keeps
+// the persisted high score + best time). Used when entering fullscreen play.
+function resetRun() {
+  player.x = START_X; player.y = 0; player.vy = 0; player.facing = 1; jumps = 0;
+  scrollTargetX = START_X; teleport = null; eating = 0;
+  score = 0; runStart = 0; runMs = 0; finished = false; flagLitAt = 0;
+  runMult = 1; boostedGates.clear(); maxX = START_X;
+  for (const c of COINS) c.got = false;
+  updateScoreHud();
+  completeEl.classList.remove("show");
 }
 
 /* ============================================================

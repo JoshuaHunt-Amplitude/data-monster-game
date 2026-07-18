@@ -445,15 +445,19 @@ const ZONES = [
    bg = everything above the walkable grass line, drawn as a parallax backdrop.
    ground = repeating wall strip drawn at parallax 1 under the player's feet.
    fill = color continuing the wall below the strip on tall windows. */
+// Plates are LAZY-loaded — only the zone(s) on screen (+ the next one) are fetched,
+// so the page doesn't download all ~7MB of backgrounds up front. ensurePlate(zi)
+// kicks off the load the first time a zone comes into view / is teleported to.
 const PLATES = {
-  0: { bg: loadImg("../assets/idea2-bg.png"),       ground: loadImg("../assets/idea2-ground.png"),       fill: "#00031b" },
-  1: { bg: loadImg("../assets/code2-bg.png"),       ground: loadImg("../assets/code2-ground.png"),       fill: "#000112" },
-  2: { bg: loadImg("../assets/validation2-bg.png"), ground: loadImg("../assets/validation2-ground.png"), fill: "#00001a" },
-  3: { bg: loadImg("../assets/review2-bg.png"),     ground: loadImg("../assets/review2-ground.png"),     fill: "#000018" },
-  4: { bg: loadImg("../assets/production2-bg.png"), ground: loadImg("../assets/production2-ground.png"), fill: "#00132e" },
+  0: { bgSrc: "../assets/idea2-bg.png",       groundSrc: "../assets/idea2-ground.png",       fill: "#00031b", bg: null, ground: null },
+  1: { bgSrc: "../assets/code2-bg.png",       groundSrc: "../assets/code2-ground.png",       fill: "#000112", bg: null, ground: null },
+  2: { bgSrc: "../assets/validation2-bg.png", groundSrc: "../assets/validation2-ground.png", fill: "#00001a", bg: null, ground: null },
+  3: { bgSrc: "../assets/review2-bg.png",     groundSrc: "../assets/review2-ground.png",     fill: "#000018", bg: null, ground: null },
+  4: { bgSrc: "../assets/production2-bg.png", groundSrc: "../assets/production2-ground.png", fill: "#00132e", bg: null, ground: null },
 };
 function loadImg(src) { const i = new Image(); i.src = src; return i; }
-function plateReady(p) { return p && p.bg.complete && p.bg.naturalWidth > 0 && p.ground.complete && p.ground.naturalWidth > 0; }
+function ensurePlate(zi) { const p = PLATES[zi]; if (p && !p.bg) { p.bg = loadImg(p.bgSrc); p.ground = loadImg(p.groundSrc); } }
+function plateReady(p) { return p && p.bg && p.bg.complete && p.bg.naturalWidth > 0 && p.ground && p.ground.complete && p.ground.naturalWidth > 0; }
 
 /* SPEED BOOST gate straddling each zone boundary. Drawn in two halves so the
    monster passes IN FRONT of the near (left) half and BEHIND the far (right)
@@ -1196,6 +1200,7 @@ function drawScene(camX, time) {
   // zone scenery, each clipped to its own strip so scenes never bleed
   // across a boundary (full painted plates make bleed very visible)
   const zLeft = zoneIndexAt(camX), zRight = zoneIndexAt(camX + W);
+  for (let zi = zLeft; zi <= zRight + 1; zi++) ensurePlate(zi);   // load visible zones + prefetch the next
   for (let zi = zLeft; zi <= zRight; zi++) {
     const sx0 = zi * ZONE_LEN - camX, sx1 = (zi + 1) * ZONE_LEN - camX;
     ctx.save();
@@ -1258,29 +1263,14 @@ function drawGates(camX, part) {
   }
 }
 
-/* Finish flag. Placeholder art drawn in code: a pole + a pennant that ripples
-   in the wind (sine along its length); once crossed it "lights up" (bright fill
-   + glow ramp). Swap for a sprite by loading a wave strip + a lit frame and
-   drawing frames here instead — the crossing latch (`finished`) already exists. */
-const flagWave = loadImg("../assets/flag-wave.png");     // optional sprite strip (frames L→R)
-const flagLit  = loadImg("../assets/flag-lit.png");      // optional lit-state frame/strip
-const FLAG = { frames: 6, fps: 10, poleH: 270, screenH: 300 };
-function flagArtReady() { return flagWave.complete && flagWave.naturalWidth > 0; }
+/* Finish flag, drawn in code: a pole + a pennant that ripples in the wind (sine
+   along its length); once crossed it "lights up" (bright fill + glow ramp). */
+const FLAG = { poleH: 270, screenH: 300 };
 function drawGoalFlag(camX, time) {
   const fx = FLAG_X - camX;
   if (fx < -160 || fx > W + 160) return;
-  const baseY = groundY, topY = groundY - FLAG.poleH;
+  const topY = groundY - FLAG.poleH;
   const litT = finished ? Math.min(1, (time - flagLitAt) / 600) : 0;
-
-  // sprite path (if art is supplied)
-  if (flagArtReady()) {
-    const img = (finished && flagLit.complete && flagLit.naturalWidth > 0) ? flagLit : flagWave;
-    const fw = img.naturalWidth / (img === flagWave ? FLAG.frames : 1);
-    const dh = FLAG.screenH, dw = fw * (dh / img.naturalHeight);
-    const frame = img === flagWave ? Math.floor(time / 1000 * FLAG.fps) % FLAG.frames : 0;
-    ctx.drawImage(img, frame * fw, 0, fw, img.naturalHeight, fx - 4, baseY - dh, dw, dh);
-    return;
-  }
 
   // procedural placeholder
   // pole

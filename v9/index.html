@@ -760,7 +760,7 @@ const LEVEL_ANCHORS = [
   { id: "ch-foundations", worldX: 5400 },   // CODE
   { id: "ch-validation",  worldX: 9000 },   // VALIDATION
   { id: "ch-review",      worldX: 12600 },  // REVIEW
-  { id: "ch-receipts",    worldX: 17550 },  // PRODUCTION — matches FLAG_X so scrolling to the end hits 100%
+  { id: "ch-receipts",    worldX: 17550, teleportX: 15000 },  // PRODUCTION — worldX matches FLAG_X (scroll to end = 100%); teleport lands at the zone start, not the finish
 ];
 let gameReady = false;
 let applyMusicMode = () => {};   // set up by the music block below; no-op until then
@@ -845,19 +845,18 @@ addEventListener("scroll", () => {
 // monster there with a poof (instant, not a slow scroll-ease).
 stageNavBtns.forEach(b => b.addEventListener("click", () => {
   const anchor = LEVEL_ANCHORS.find(a => a.id === b.dataset.anchor);
-  const el = document.getElementById(b.dataset.anchor);
+  if (!anchor) return;
+  // teleportX lets a level land somewhere other than its scroll anchor — PRODUCTION
+  // uses it so clicking it drops you at the zone START, not on the finish flag.
+  const tx = anchor.teleportX ?? anchor.worldX;
   suppressUntil = performance.now() + 300;                // our own snap — don't echo as a progress message
   gameScrollTarget = null;
-  if (el) {
-    // Clamp so we never scroll back up over the hero — otherwise IDEA (top of the
-    // article) would bring the hero's bottom to y=0, flip logo-shown off and make
-    // the minimap/toggle vanish. heroFloor keeps the hero fully off-screen, which
-    // makes the IDEA target the article's start point.
-    const heroFloor = heroEl.offsetTop + heroEl.offsetHeight + 2;
-    const target = Math.max(el.getBoundingClientRect().top + window.scrollY, heroFloor);
-    window.scrollTo({ top: target, behavior: "instant" });
-  }
-  if (anchor) { postToGame({ type: "teleport", worldX: anchor.worldX }); setStageActive(LEVEL_ANCHORS.indexOf(anchor)); }
+  // Clamp to heroFloor so IDEA (top of the article) can't scroll back over the hero
+  // (which would flip logo-shown off and hide the minimap/toggle).
+  const heroFloor = heroEl.offsetTop + heroEl.offsetHeight + 2;
+  window.scrollTo({ top: Math.max(worldXToScrollY(tx), heroFloor), behavior: "instant" });
+  postToGame({ type: "teleport", worldX: tx });
+  setStageActive(LEVEL_ANCHORS.indexOf(anchor));
 }));
 // game hotkeys forwarded to the embed (game mode): E = data nom, W = jump
 document.getElementById("btn-nom")?.addEventListener("click", () => postToGame({ type: "eat" }));
@@ -906,10 +905,21 @@ requestAnimationFrame(gameScrollEase);
 
 // hovering "Read & play game" fades in the Unicorn Studio backdrop and turns
 // the pixel title white — both only while hovering that button.
+// The Unicorn Studio SDK + its scene texture are LAZY-loaded on first hover so
+// they never touch the initial page load (they'd otherwise pull a WebGL SDK and
+// a ~2.5MB image up front).
 const landing = document.getElementById("landing");
 const gameBtn = document.querySelector('#landing .l-choices button[data-mode="game"]');
+let usLoaded = false;
+function loadUnicorn() {
+  if (usLoaded) return; usLoaded = true;
+  const i = document.createElement("script");
+  i.src = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.2.7/dist/unicornStudio.umd.js";
+  i.onload = () => { if (window.UnicornStudio && UnicornStudio.init) UnicornStudio.init(); };
+  document.head.appendChild(i);
+}
 if (gameBtn) {
-  const on = () => { landing.classList.add("us-active"); setTitleWhite(true); };
+  const on = () => { loadUnicorn(); landing.classList.add("us-active"); setTitleWhite(true); };
   const off = () => { landing.classList.remove("us-active"); setTitleWhite(false); };
   gameBtn.addEventListener("pointerenter", on);
   gameBtn.addEventListener("pointerleave", off);
@@ -1174,7 +1184,7 @@ document.querySelectorAll("canvas.flowviz").forEach((cv) => {
 });
 </script>
 
-<!-- Unicorn Studio SDK — loads once, then inits the #us-bg scene -->
-<script>!function(){var u=window.UnicornStudio;if(u&&u.init){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){u.init()})}else{u.init()}}else{window.UnicornStudio={isInitialized:!1};var i=document.createElement("script");i.src="https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.2.7/dist/unicornStudio.umd.js",i.onload=function(){if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){UnicornStudio.init()})}else{UnicornStudio.init()}},(document.head||document.body).appendChild(i)}}();</script>
+<!-- Unicorn Studio backdrop is lazy-loaded on first hover of the game button
+     (see loadUnicorn() above) so its SDK + texture stay off the initial load. -->
 </body>
 </html>

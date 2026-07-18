@@ -832,9 +832,18 @@ addEventListener("scroll", () => {
 // monster there with a poof (instant, not a slow scroll-ease).
 stageNavBtns.forEach(b => b.addEventListener("click", () => {
   const anchor = LEVEL_ANCHORS.find(a => a.id === b.dataset.anchor);
+  const el = document.getElementById(b.dataset.anchor);
   suppressUntil = performance.now() + 300;                // our own snap — don't echo as a progress message
   gameScrollTarget = null;
-  document.getElementById(b.dataset.anchor)?.scrollIntoView({ behavior: "instant" });
+  if (el) {
+    // Clamp so we never scroll back up over the hero — otherwise IDEA (top of the
+    // article) would bring the hero's bottom to y=0, flip logo-shown off and make
+    // the minimap/toggle vanish. heroFloor keeps the hero fully off-screen, which
+    // makes the IDEA target the article's start point.
+    const heroFloor = heroEl.offsetTop + heroEl.offsetHeight + 2;
+    const target = Math.max(el.getBoundingClientRect().top + window.scrollY, heroFloor);
+    window.scrollTo({ top: target, behavior: "instant" });
+  }
   if (anchor) { postToGame({ type: "teleport", worldX: anchor.worldX }); setStageActive(LEVEL_ANCHORS.indexOf(anchor)); }
 }));
 // the game announces readiness on load, and posts its world-x while the player

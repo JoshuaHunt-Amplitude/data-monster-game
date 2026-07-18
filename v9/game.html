@@ -464,6 +464,11 @@ const gateImg = loadImg("../assets/speed-boost-gate.png");
 const GATE = { W: 1187, H: 777, screenH: 330, openCx: 0.455, split: 0.64, sink: 6 };
 function gateReady() { return gateImg.complete && gateImg.naturalWidth > 0; }
 
+/* animated lightning "zap" shown in the middle of each speed-boost gate opening */
+const zapImg = loadImg("../assets/zap-speed-boost.png");
+const ZAP = { frames: 4, fps: 12, screenH: 150 };   // screenH = on-screen height
+function zapReady() { return zapImg.complete && zapImg.naturalWidth > 0; }
+
 /* ============================================================
    COLLECTIBLES — coins (small) + diamonds (big). Art is optional:
    drop transparent PNGs at assets/coin.png / assets/diamond.png (or
@@ -474,8 +479,8 @@ function gateReady() { return gateImg.complete && gateImg.naturalWidth > 0; }
    ============================================================ */
 const coinImg = loadImg("../assets/coin.png");
 const gemImg  = loadImg("../assets/diamond.png");
-const COIN = { img: coinImg, frames: 1, size: 46 };   // size = on-screen px; bump frames if a spin strip is supplied
-const GEM  = { img: gemImg,  frames: 1, size: 60 };
+const COIN = { img: coinImg, frames: 4, size: 46 };   // 4-frame spin strip; size = on-screen px
+const GEM  = { img: gemImg,  frames: 4, size: 60 };   // 4-frame sparkle strip
 function nearGate(x) { for (let k = 1; k < ZONES.length; k++) if (Math.abs(x - k * ZONE_LEN) < 240) return true; return false; }
 const COINS = (() => {
   const out = [];
@@ -1223,6 +1228,13 @@ function drawGates(camX, part) {
       ctx.fillRect(bx - 55, top + gh * 0.12, 110, H - (top + gh * 0.12));
       // left half of the gate
       ctx.drawImage(gateImg, 0, 0, GATE.W * sp, GATE.H, left, top, gw * sp, gh);
+      // animated lightning zap in the middle of the opening (behind the monster)
+      if (zapReady()) {
+        const zfw = zapImg.naturalWidth / ZAP.frames;
+        const zh = ZAP.screenH, zw = zfw * (zh / zapImg.naturalHeight);
+        const zf = Math.floor(performance.now() / 1000 * ZAP.fps) % ZAP.frames;
+        ctx.drawImage(zapImg, zf * zfw, 0, zfw, zapImg.naturalHeight, bx - zw / 2, (top + gh * 0.42) - zh / 2, zw, zh);
+      }
     } else {
       // right half (right post + chevron panel) — occludes the monster
       ctx.drawImage(gateImg, GATE.W * sp, 0, GATE.W * (1 - sp), GATE.H, left + gw * sp, top, gw * (1 - sp), gh);

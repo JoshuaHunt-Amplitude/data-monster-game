@@ -779,6 +779,8 @@ window.addEventListener("message", e => {
   else if (d.type === "teleport" && typeof d.worldX === "number") teleportToX(d.worldX);
   // cookie button / E key in the parent → data nom nom
   else if (d.type === "eat") startEat();
+  // W key in the parent → jump (mirrors click-to-jump in the embed)
+  else if (d.type === "jump") { if (started && !teleport && eating <= 0) wantJump = true; }
   // "Play with arrows" toggle (future) enables manual keyboard control in the embed
   else if (d.type === "enableKeys") keysEnabled = !!d.on;
 });

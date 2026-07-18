@@ -121,7 +121,7 @@
   #stage-nav .nav-label { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink); }
   #stage-nav .pills {
     display: flex; gap: 0;
-    background: rgba(10,11,13,0.74); border: 1px solid var(--hairline-strong); border-radius: 8px; overflow: hidden;
+    background: rgba(10,11,13,0.74); border: 1px solid var(--hairline-strong); border-radius: 4px; overflow: hidden;
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   }
   #stage-nav button {
@@ -144,7 +144,7 @@
   #stage-nav #btn-nom {
     --c: #f0c674;
     padding: 8px 13px; font-size: 16px; line-height: 1;
-    border: 1px solid var(--hairline-strong); border-radius: 8px;
+    border: 1px solid var(--hairline-strong); border-radius: 4px;
     background: rgba(10,11,13,0.74);
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     cursor: pointer;
@@ -859,10 +859,12 @@ stageNavBtns.forEach(b => b.addEventListener("click", () => {
   }
   if (anchor) { postToGame({ type: "teleport", worldX: anchor.worldX }); setStageActive(LEVEL_ANCHORS.indexOf(anchor)); }
 }));
-// cookie "data nom" — button click + E hotkey both tell the game to eat (game mode)
+// game hotkeys forwarded to the embed (game mode): E = data nom, W = jump
 document.getElementById("btn-nom")?.addEventListener("click", () => postToGame({ type: "eat" }));
 addEventListener("keydown", e => {
-  if ((e.key === "e" || e.key === "E") && document.body.classList.contains("mode-game")) postToGame({ type: "eat" });
+  if (!document.body.classList.contains("mode-game")) return;
+  if (e.key === "e" || e.key === "E") postToGame({ type: "eat" });
+  else if (e.key === "w" || e.key === "W") postToGame({ type: "jump" });
 });
 // the game announces readiness on load, and posts its world-x while the player
 // drives it — move the article to follow (unless the reader is scrolling).

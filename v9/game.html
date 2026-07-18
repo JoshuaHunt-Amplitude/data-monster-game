@@ -466,7 +466,7 @@ function gateReady() { return gateImg.complete && gateImg.naturalWidth > 0; }
 
 /* animated lightning "zap" shown in the middle of each speed-boost gate opening */
 const zapImg = loadImg("../assets/zap-speed-boost.png");
-const ZAP = { frames: 4, fps: 12, screenH: 150 };   // screenH = on-screen height
+const ZAP = { frames: 4, fps: 12, screenH: 90 };   // screenH = on-screen height (40% smaller than the original 150)
 function zapReady() { return zapImg.complete && zapImg.naturalWidth > 0; }
 
 /* ============================================================
@@ -479,8 +479,11 @@ function zapReady() { return zapImg.complete && zapImg.naturalWidth > 0; }
    ============================================================ */
 const coinImg = loadImg("../assets/coin.png");
 const gemImg  = loadImg("../assets/diamond.png");
-const COIN = { img: coinImg, frames: 4, size: 46 };   // 4-frame spin strip; size = on-screen px
-const GEM  = { img: gemImg,  frames: 4, size: 60 };   // 4-frame sparkle strip
+// frames = cells in the source strip (for slicing); still = show only the first
+// frame (no cycling) — the multi-frame spin read poorly at this size, so we keep
+// a single clean frame and let the bob in drawCoins give it life.
+const COIN = { img: coinImg, frames: 4, still: true, size: 46 };
+const GEM  = { img: gemImg,  frames: 4, still: true, size: 60 };
 function nearGate(x) { for (let k = 1; k < ZONES.length; k++) if (Math.abs(x - k * ZONE_LEN) < 240) return true; return false; }
 const COINS = (() => {
   const out = [];
@@ -774,6 +777,8 @@ window.addEventListener("message", e => {
   else if (d.type === "progress" && typeof d.worldX === "number" && !manualDriving()) scrollTargetX = d.worldX;
   // level pill clicked in the parent → warp the monster there with a poof
   else if (d.type === "teleport" && typeof d.worldX === "number") teleportToX(d.worldX);
+  // cookie button / E key in the parent → data nom nom
+  else if (d.type === "eat") startEat();
   // "Play with arrows" toggle (future) enables manual keyboard control in the embed
   else if (d.type === "enableKeys") keysEnabled = !!d.on;
 });
@@ -827,14 +832,24 @@ canvas.addEventListener("pointerdown", () => {
 });
 
 // "click to jump" affordance: a label stuck beside the cursor while the mouse is
-// over the game. Follows the pointer; hides when it leaves or before the game starts.
+// over the game. It follows the pointer, then fades after 3s of hovering so it
+// doesn't nag; re-arms once the pointer leaves and returns.
 const tapHint = document.getElementById("tap-hint");
+let tapHintTimer = 0, tapHintDone = false;
 canvas.addEventListener("mousemove", e => {
-  if (!started) { tapHint.classList.remove("show"); return; }
+  if (!started || tapHintDone) return;
   tapHint.style.transform = `translate(${e.clientX + 18}px, ${e.clientY + 6}px)`;
-  tapHint.classList.add("show");
+  if (!tapHint.classList.contains("show")) {   // first move this hover → show + start the 3s countdown
+    tapHint.classList.add("show");
+    clearTimeout(tapHintTimer);
+    tapHintTimer = setTimeout(() => { tapHint.classList.remove("show"); tapHintDone = true; }, 3000);
+  }
 });
-canvas.addEventListener("mouseleave", () => tapHint.classList.remove("show"));
+canvas.addEventListener("mouseleave", () => {
+  tapHint.classList.remove("show");
+  clearTimeout(tapHintTimer);
+  tapHintDone = false;   // re-arm for the next hover
+});
 
 // Touch controls (double-tap works here too via pressDir)
 function bindHold(id, onDown, onUp) {
@@ -1318,8 +1333,8 @@ function drawCoins(camX, time) {
     if (coinArtReady(cfg)) {
       const fw = cfg.img.naturalWidth / cfg.frames;
       const dh = cfg.size, dw = fw * (dh / cfg.img.naturalHeight);
-      const frame = cfg.frames > 1 ? Math.floor(time / 1000 * 10) % cfg.frames : 0;
-      ctx.drawImage(cfg.img, frame * fw, 0, fw, cfg.img.naturalHeight, sx - dw / 2, cy - dh / 2, dw, dh);
+      const frame = (cfg.still || cfg.frames <= 1) ? 0 : Math.floor(time / 1000 * 10) % cfg.frames;
+      ctx.drawImage(cfg.img, Math.round(frame * fw), 0, Math.floor(fw), cfg.img.naturalHeight, sx - dw / 2, cy - dh / 2, dw, dh);
       continue;
     }
     // procedural fallback

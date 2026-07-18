@@ -114,7 +114,6 @@
   }
   #hud-score { color: #ffd447; font-size: 15px; letter-spacing: 1px; }
   #hud-best { color: rgba(238,240,255,0.55); font-size: 11px; margin-left: 10px; letter-spacing: 1.5px; }
-  #hud-timer { color: #eef0ff; font-size: 16px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 
   #level-nav {
     position: fixed;
@@ -263,6 +262,23 @@
   }
   #controls-hint.show { opacity: 1; }
 
+  /* click-to-jump affordance — nudges once on hover over the game, then fades */
+  #tap-hint {
+    position: fixed; left: 50%; bottom: 18%;
+    transform: translate(-50%, 8px);
+    z-index: 5; pointer-events: none;
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 16px;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; color: #eef0ff;
+    background: rgba(13, 12, 40, 0.82);
+    border: 2px solid var(--amp-light); border-radius: 999px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  #tap-hint.show { opacity: 1; transform: translate(-50%, 0); }
+  #tap-hint .k { font-size: 14px; }
+
   /* completion banner — fades in when the monster crosses the finish flag */
   #complete {
     position: fixed; left: 50%; top: 38%;
@@ -322,8 +338,6 @@
 
 <div id="hud">
   <span id="hud-score">★ 0<small id="hud-best"></small></span>
-  <span id="hud-timer">0.000</span>
-  <span id="hud-progress">0%</span>
 </div>
 
 <nav id="level-nav">
@@ -368,6 +382,8 @@
   <div class="tc-copy">© 2026 Amplitude</div>
 </div>
 <div id="controls-hint">→ / ← WALK &nbsp;·&nbsp; DOUBLE-TAP → RUN &nbsp;·&nbsp; ↑ JUMP<br>↑↑ DOUBLE JUMP &nbsp;·&nbsp; ↓ DUCK &nbsp;·&nbsp; E = 🍪 DATA NOM</div>
+
+<div id="tap-hint"><span class="k">▲</span> Click to jump</div>
 
 <div id="complete">
   <div class="c-kicker">Level complete</div>
@@ -630,10 +646,8 @@ function startStars() {
 function stopStars() { if (starRAF) { cancelAnimationFrame(starRAF); starRAF = null; } }
 window.addEventListener("resize", () => { if (starRAF) resizeStars(); });
 startStars();
-const hudProgress = document.getElementById("hud-progress");
 const hudScore = document.getElementById("hud-score");
 const hudBest = document.getElementById("hud-best");
-const hudTimer = document.getElementById("hud-timer");
 const completeEl = document.getElementById("complete");
 function updateScoreHud() {
   hudScore.innerHTML = "★ " + score + (hiScore > 0 ? `<small id="hud-best">BEST ${hiScore}</small>` : "");
@@ -731,6 +745,9 @@ function endControls() {
 let scrolly = false;
 let scrollTargetX = 300;    // world x the monster is easing toward
 let scrollyRunning = false; // true when far from target → run animation
+let keysEnabled = false;    // in the embed, arrow keys are OFF by default (scroll +
+                            // click-to-jump + teleport only). A future "Play with
+                            // ←↑↓→" button flips this via an enableKeys message.
 // Bidirectional sync: in the embed, manual input takes ownership for a beat and
 // the game drives the article; otherwise the article's scroll drives the game.
 let lastManual = -1e9;      // performance.now() of the last manual input
@@ -752,6 +769,10 @@ window.addEventListener("message", e => {
   if (d.type === "scrollytelling") setScrolly(!!d.on);
   // while the player is driving, ignore the article's scroll target (no snap-back)
   else if (d.type === "progress" && typeof d.worldX === "number" && !manualDriving()) scrollTargetX = d.worldX;
+  // level pill clicked in the parent → warp the monster there with a poof
+  else if (d.type === "teleport" && typeof d.worldX === "number") teleportToX(d.worldX);
+  // "Play with arrows" toggle (future) enables manual keyboard control in the embed
+  else if (d.type === "enableKeys") keysEnabled = !!d.on;
 });
 // tell the parent we're ready so it can (re)send the mode + first target
 try { parent.postMessage({ type: "game-ready" }, "*"); } catch (e) {}
@@ -779,6 +800,7 @@ window.addEventListener("keydown", e => {
       startGame(); e.preventDefault(); return;
     }
   }
+  if (scrolly && !keysEnabled) return;   // embed: keys off by default → scroll + click + teleport only
   if (e.key === "ArrowRight" || e.key === "d") { pressDir("right"); e.preventDefault(); }
   if (e.key === "ArrowLeft"  || e.key === "a") { pressDir("left");  e.preventDefault(); }
   if (e.key === "ArrowUp" || e.key === "w" || e.key === " ") { wantJump = true; noteManual(); e.preventDefault(); }
@@ -793,6 +815,25 @@ window.addEventListener("keyup", e => {
 
 // click / tap anywhere on the title screen to start
 window.addEventListener("pointerdown", () => { if (!scrolly && !started) startGame(); });
+
+// click on the GAME = jump (double-click = double jump via the jump counter).
+// Fires only on the canvas, so nav/minimap buttons still do their own thing.
+canvas.addEventListener("pointerdown", () => {
+  if (!started || teleport || eating > 0) return;
+  wantJump = true;
+});
+
+// "click to jump" affordance: fade in when the pointer enters the game, hold 3s,
+// then fade out — a gentle nudge that doesn't nag.
+const tapHint = document.getElementById("tap-hint");
+let tapHintTimer = 0;
+canvas.addEventListener("mouseenter", () => {
+  if (!started) return;
+  tapHint.classList.add("show");
+  clearTimeout(tapHintTimer);
+  tapHintTimer = setTimeout(() => tapHint.classList.remove("show"), 3000);
+});
+canvas.addEventListener("mouseleave", () => { tapHint.classList.remove("show"); clearTimeout(tapHintTimer); });
 
 // Touch controls (double-tap works here too via pressDir)
 function bindHold(id, onDown, onUp) {
@@ -831,14 +872,20 @@ function spawnPoof(worldX, feetY) {
 }
 
 function startTeleport(zi) {
-  if (teleport) return;
   const targetX = zi === 0 ? 300 : zi * ZONE_LEN + 420;
-  if (Math.abs(targetX - player.x) < 10) return;
-  // level-nav teleport dismisses the title but skips the controls hint
+  teleportToX(targetX);
+}
+// Warp the monster to a world-x with a poof on both ends. Used by the standalone
+// level-nav and by the parent's level pills (via a teleport postMessage).
+function teleportToX(x) {
+  if (teleport) return;
+  x = Math.max(120, Math.min(WORLD_LENGTH - 120, x));
+  if (Math.abs(x - player.x) < 10) return;
   if (!started) { started = true; titleCard.classList.add("hidden"); stopStars(); }
   endControls();
   spawnPoof(player.x, groundY);
-  teleport = { targetX, until: performance.now() + 380 };
+  scrollTargetX = x;                              // keep the scroll target in sync so it doesn't ease away
+  teleport = { targetX: x, until: performance.now() + 380 };
 }
 
 function updateSparks(dt, camX) {
@@ -1377,7 +1424,7 @@ function loop(now) {
   // horizontal
   let dir = 0;
   let running;
-  if (scrolly && !manualDriving()) {
+  if (scrolly && !manualDriving() && !teleport) {
     // scroll-driven: ease player.x toward the target the parent posts; walk
     // when close, run when far so big jumps (nav clicks) read as a sprint.
     const dx = scrollTargetX - player.x;
@@ -1498,11 +1545,9 @@ function loop(now) {
     showComplete();
   }
 
-  // HUD + level progress (100% at the finish flag, not the raw world end)
+  // level progress drives the nav/minimap only — no on-screen timer or % readout
+  // (kept off the top bar so players aren't pressured; the time shows in results)
   maxX = Math.max(maxX, player.x);
-  const prog = Math.max(0, Math.min(100, Math.round((player.x - START_X) / (FLAG_X - START_X) * 100)));
-  hudProgress.textContent = prog + "%";
-  hudTimer.textContent = fmtTime(runMs);
   updateLevelUI();
 
   drawScene(camX, now);

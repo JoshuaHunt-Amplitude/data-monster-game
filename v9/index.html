@@ -104,29 +104,39 @@
   #landing.us-active .l-choices button:not(.primary) { color: #fff; background: rgba(8, 9, 10, 0.55); }
 
   /* persistent mode toggle — appears once you scroll past the selector hero */
-  #mode-toggle { position: fixed; top: 18px; right: 24px; z-index: 61; display: none; align-items: center; }
+  /* mode toggle — segmented READ & PLAY / READ AS ARTICLE pill */
+  #mode-toggle { position: fixed; top: 16px; right: 24px; z-index: 61; display: none; align-items: center; gap: 2px; padding: 4px; background: rgba(15,16,17,0.72); border: 0.5px solid var(--hairline-strong); border-radius: 999px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
   body.past-hero #mode-toggle { display: inline-flex; }
-  #mode-toggle button { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; padding: 8px 10px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: var(--radius-button); transition: color 0.15s ease; }
+  #mode-toggle button { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 7px 14px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: 999px; transition: color 0.15s ease, background 0.15s ease; }
   #mode-toggle button:hover { color: var(--ink-muted); }
-  #mode-toggle button.active { color: var(--ink); }
-  #mode-toggle .sep { color: var(--ink-tertiary); padding: 0 2px; }
+  #mode-toggle button.active { color: #fff; background: rgba(255,255,255,0.10); }
+  #mode-toggle .sep { display: none; }
 
-  /* pipeline-stage nav (game mode) — top-center TOC that also moves the monster */
-  #stage-nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 61; display: none; gap: 6px; }
+  /* pipeline-stage nav (game mode) — LEVELS label + per-zone colored pills */
+  #stage-nav { position: fixed; top: 14px; left: 24px; z-index: 61; display: none; flex-direction: column; align-items: flex-start; gap: 7px; }
   body.mode-game.past-hero #stage-nav { display: inline-flex; }
+  #stage-nav .nav-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-subtle); padding-left: 2px; }
+  #stage-nav .pills { display: flex; gap: 6px; }
   #stage-nav button {
-    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
-    padding: 7px 11px; border: 0.5px solid var(--hairline-strong); background: rgba(15,16,17,0.72);
+    --c: var(--ink-tertiary);
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 7px 12px; border: 1px solid var(--hairline-strong); background: rgba(15,16,17,0.72);
     color: var(--ink-subtle); border-radius: var(--radius-button); cursor: pointer;
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  #stage-nav button:hover { color: var(--ink); border-color: var(--ink-tertiary); }
-  #stage-nav button.active { color: #fff; background: #3B82F6; border-color: #3B82F6; }
+  #stage-nav button:nth-of-type(1) { --c: #a78bfa; }   /* IDEA — purple */
+  #stage-nav button:nth-of-type(2) { --c: #60a5fa; }   /* CODE — blue */
+  #stage-nav button:nth-of-type(3) { --c: #4ade80; }   /* VALIDATION — green */
+  #stage-nav button:nth-of-type(4) { --c: #f472b6; }   /* REVIEW — pink */
+  #stage-nav button:nth-of-type(5) { --c: #22d3ee; }   /* PRODUCTION — cyan */
+  #stage-nav button:hover { color: var(--ink); border-color: color-mix(in srgb, var(--c) 65%, transparent); }
+  #stage-nav button.visited { color: var(--c); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+  #stage-nav button.active { color: #fff; border-color: var(--c); background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: 0 0 0 1px var(--c), 0 0 16px color-mix(in srgb, var(--c) 45%, transparent); }
 
   #music-toggle {
     position: fixed;
-    top: 20px; left: 28px;
+    bottom: 20px; left: 24px; top: auto;
     z-index: 61;
     display: none; align-items: center; gap: 8px;   /* music is a game-mode thing */
     padding: 6px 6px;
@@ -352,7 +362,7 @@
 
 <!-- persistent mode toggle -->
 <div id="mode-toggle">
-  <button data-mode="game">Read &amp; play game</button>
+  <button data-mode="game">Read &amp; play</button>
   <span class="sep">/</span>
   <button data-mode="article">Read as article</button>
 </div>
@@ -363,11 +373,14 @@
 <!-- pipeline-stage nav (game mode) — jumps to a chapter + moves the monster;
      doubles as the game-mode table of contents -->
 <nav id="stage-nav" aria-label="Pipeline stages">
-  <button data-anchor="ch-intro">Idea</button>
-  <button data-anchor="ch-foundations">Code</button>
-  <button data-anchor="ch-validation">Validation</button>
-  <button data-anchor="ch-review">Review</button>
-  <button data-anchor="ch-receipts">Production</button>
+  <span class="nav-label">Levels</span>
+  <div class="pills">
+    <button data-anchor="ch-intro">Idea</button>
+    <button data-anchor="ch-foundations">Code</button>
+    <button data-anchor="ch-validation">Validation</button>
+    <button data-anchor="ch-review">Review</button>
+    <button data-anchor="ch-receipts">Production</button>
+  </div>
 </nav>
 
 <!-- ============================ STORY ============================ -->
@@ -723,6 +736,13 @@ let lastUserScroll = -1e9;
 let suppressUntil = 0;
 function articleDriving() { return performance.now() - lastUserScroll < 500; }
 function anchorAbsTop(id) { const el = document.getElementById(id); return el ? el.getBoundingClientRect().top + window.scrollY : 0; }
+// current pill = active (filled + glow); earlier pills = visited (accent border)
+function setStageActive(active) {
+  stageNavBtns.forEach((b, i) => {
+    b.classList.toggle("active", i === active);
+    b.classList.toggle("visited", i < active);
+  });
+}
 function highlightStage(worldX) {
   const A = LEVEL_ANCHORS; let active = 0;
   for (let i = 0; i < A.length; i++) if (worldX >= A[i].worldX) active = i;
@@ -730,7 +750,7 @@ function highlightStage(worldX) {
     const t = (worldX - A[active].worldX) / (A[active + 1].worldX - A[active].worldX);
     if (t >= 0.5) active += 1;
   }
-  stageNavBtns.forEach((b, i) => b.classList.toggle("active", i === active));
+  setStageActive(active);
 }
 // invert the anchor map: monster world-x → the scrollY that parks that anchor on
 // the reference line, so the article follows the player.
@@ -770,7 +790,7 @@ function gameScrollSync() {
     }
   }
   postToGame({ type: "progress", worldX });
-  stageNavBtns.forEach((b, i) => b.classList.toggle("active", i === active));
+  setStageActive(active);
 }
 addEventListener("scroll", () => {
   if (performance.now() < suppressUntil) return;   // a scroll WE triggered (game-driven) — don't echo it
@@ -778,9 +798,14 @@ addEventListener("scroll", () => {
   gameScrollTarget = null;                           // reader took over → release the game's scroll follow
   gameScrollSync();
 }, { passive: true });
-// stage-nav clicks: scroll to the chapter (the scroll sync then moves the monster)
+// stage-nav clicks: TELEPORT — snap the article to the chapter and warp the
+// monster there with a poof (instant, not a slow scroll-ease).
 stageNavBtns.forEach(b => b.addEventListener("click", () => {
-  document.getElementById(b.dataset.anchor)?.scrollIntoView({ behavior: "smooth" });
+  const anchor = LEVEL_ANCHORS.find(a => a.id === b.dataset.anchor);
+  suppressUntil = performance.now() + 300;                // our own snap — don't echo as a progress message
+  gameScrollTarget = null;
+  document.getElementById(b.dataset.anchor)?.scrollIntoView({ behavior: "instant" });
+  if (anchor) { postToGame({ type: "teleport", worldX: anchor.worldX }); setStageActive(LEVEL_ANCHORS.indexOf(anchor)); }
 }));
 // the game announces readiness on load, and posts its world-x while the player
 // drives it — move the article to follow (unless the reader is scrolling).

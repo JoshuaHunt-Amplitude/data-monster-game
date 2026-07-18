@@ -262,22 +262,20 @@
   }
   #controls-hint.show { opacity: 1; }
 
-  /* click-to-jump affordance — nudges once on hover over the game, then fades */
+  /* click-to-jump affordance — a label that sticks beside the cursor while the
+     mouse is over the game (position set in JS via transform). */
   #tap-hint {
-    position: fixed; left: 50%; bottom: 18%;
-    transform: translate(-50%, 8px);
-    z-index: 5; pointer-events: none;
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 16px;
-    font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-    letter-spacing: 2px; text-transform: uppercase; color: #eef0ff;
-    background: rgba(13, 12, 40, 0.82);
-    border: 2px solid var(--amp-light); border-radius: 999px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-    opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease;
+    position: fixed; left: 0; top: 0;
+    z-index: 7; pointer-events: none; white-space: nowrap;
+    padding: 8px 14px;
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; color: #ffffff;
+    background: rgba(10, 10, 16, 0.9);
+    border-radius: 6px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    opacity: 0; transition: opacity 0.18s ease;
   }
-  #tap-hint.show { opacity: 1; transform: translate(-50%, 0); }
-  #tap-hint .k { font-size: 14px; }
+  #tap-hint.show { opacity: 1; }
 
   /* completion banner — fades in when the monster crosses the finish flag */
   #complete {
@@ -383,7 +381,7 @@
 </div>
 <div id="controls-hint">→ / ← WALK &nbsp;·&nbsp; DOUBLE-TAP → RUN &nbsp;·&nbsp; ↑ JUMP<br>↑↑ DOUBLE JUMP &nbsp;·&nbsp; ↓ DUCK &nbsp;·&nbsp; E = 🍪 DATA NOM</div>
 
-<div id="tap-hint"><span class="k">▲</span> Click to jump</div>
+<div id="tap-hint">Click to jump</div>
 
 <div id="complete">
   <div class="c-kicker">Level complete</div>
@@ -823,17 +821,15 @@ canvas.addEventListener("pointerdown", () => {
   wantJump = true;
 });
 
-// "click to jump" affordance: fade in when the pointer enters the game, hold 3s,
-// then fade out — a gentle nudge that doesn't nag.
+// "click to jump" affordance: a label stuck beside the cursor while the mouse is
+// over the game. Follows the pointer; hides when it leaves or before the game starts.
 const tapHint = document.getElementById("tap-hint");
-let tapHintTimer = 0;
-canvas.addEventListener("mouseenter", () => {
-  if (!started) return;
+canvas.addEventListener("mousemove", e => {
+  if (!started) { tapHint.classList.remove("show"); return; }
+  tapHint.style.transform = `translate(${e.clientX + 18}px, ${e.clientY + 6}px)`;
   tapHint.classList.add("show");
-  clearTimeout(tapHintTimer);
-  tapHintTimer = setTimeout(() => tapHint.classList.remove("show"), 3000);
 });
-canvas.addEventListener("mouseleave", () => { tapHint.classList.remove("show"); clearTimeout(tapHintTimer); });
+canvas.addEventListener("mouseleave", () => tapHint.classList.remove("show"));
 
 // Touch controls (double-tap works here too via pressDir)
 function bindHold(id, onDown, onUp) {

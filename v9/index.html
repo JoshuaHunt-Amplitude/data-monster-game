@@ -1021,21 +1021,19 @@ function makeFlow(canvas, openKeys) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     cy = Math.round(H * 0.56);
     RH = Math.min(44, H * 0.30);
-    const padL = 32, padR = 32;
-    nodeX = stages.map((s, i) => padL + (W - padL - padR) * (i / (stages.length - 1)));
-    // shrink the stage labels (11px → 9px) until the tightest adjacent pair
-    // clears — PRODUCTION is right-aligned, so it crowds REVIEW on narrow widths.
-    const last = stages.length - 1, MARGIN = 14;
+    // Evenly spaced nodes with every label CENTERED on its node (matches Figma).
+    // Pick the largest size (11→9px) and a horizontal inset that keeps the
+    // centered edge labels on-canvas and every adjacent pair clear.
+    const last = stages.length - 1, MARGIN = 16;
     for (let fs = 11; fs >= 9; fs--) {
       ctx.font = "600 " + fs + "px " + LABEL_FAM; ctx.letterSpacing = "0.02em";
+      const wid = stages.map((s) => ctx.measureText(s.label.toUpperCase()).width);
+      const widest = Math.max.apply(null, wid);
+      const pad = Math.max(widest / 2 + MARGIN, W * 0.08);   // inset ≥ half widest edge label
+      nodeX = stages.map((s, i) => pad + (W - 2 * pad) * (i / last));
+      const gap = (W - 2 * pad) / last;
       let minGap = Infinity;
-      for (let i = 0; i < last; i++) {
-        const wL = ctx.measureText(stages[i].label.toUpperCase()).width;
-        const wR = ctx.measureText(stages[i + 1].label.toUpperCase()).width;
-        const rightL = i === 0 ? nodeX[0] + wL : nodeX[i] + wL / 2;
-        const leftR = i + 1 === last ? nodeX[i + 1] - wR : nodeX[i + 1] - wR / 2;
-        minGap = Math.min(minGap, leftR - rightL);
-      }
+      for (let i = 0; i < last; i++) minGap = Math.min(minGap, gap - wid[i] / 2 - wid[i + 1] / 2);
       labelFS = fs;
       if (minGap >= MARGIN) break;
     }
@@ -1051,10 +1049,10 @@ function makeFlow(canvas, openKeys) {
     return m;
   }
   const halfH = (x) => RH * (1 - (1 - NECK) * pinch(x));
-  const baseV = () => W / 3.6;
+  const baseV = () => (nodeX[nodeX.length - 1] - nodeX[0]) / 3.6;
 
   function spawn() {
-    particles.push({ x: -6, lane: Math.random() * 2 - 1, col: FLOW_C.parts[(Math.random() * FLOW_C.parts.length) | 0], ph: Math.random() * 6.28, r: 2.1 + Math.random() * 1.3 });
+    particles.push({ x: nodeX[0] - 6, lane: Math.random() * 2 - 1, col: FLOW_C.parts[(Math.random() * FLOW_C.parts.length) | 0], ph: Math.random() * 6.28, r: 2.1 + Math.random() * 1.3 });
   }
   function tick(now) {
     if (!t0) t0 = now;
@@ -1065,7 +1063,7 @@ function makeFlow(canvas, openKeys) {
       const slow = 0.16 + 0.84 * (1 - pinch(p.x));    // crawl through a locked neck → bunch up
       p.x += baseV() * slow * dt;
     }
-    particles = particles.filter((p) => p.x < W + 6);
+    particles = particles.filter((p) => p.x < nodeX[nodeX.length - 1] + 6);
     draw(now);
   }
   function step(now) { tick(now); if (running) requestAnimationFrame(step); }
@@ -1112,7 +1110,7 @@ function makeFlow(canvas, openKeys) {
     for (const s of stages) {
       const x = nodeX[s.i];
       ctx.fillStyle = s.gate ? (s.open ? FLOW_C.green : FLOW_C.red) : FLOW_C.white;
-      ctx.textAlign = s.i === 0 ? "left" : (s.i === last ? "right" : "center");
+      ctx.textAlign = "center";
       ctx.fillText(s.label.toUpperCase(), x, labelY);
     }
     ctx.letterSpacing = "0px"; ctx.textAlign = "center";

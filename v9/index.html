@@ -108,34 +108,38 @@
   /* persistent mode toggle — appears once you scroll past the selector hero */
   /* mode toggle — segmented READ & PLAY / READ AS ARTICLE pill */
   #mode-toggle { position: fixed; top: 16px; right: 24px; z-index: 61; display: none; align-items: center; gap: 2px; padding: 4px; background: rgba(15,16,17,0.72); border: 0.5px solid var(--hairline-strong); border-radius: 999px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-  body.past-hero #mode-toggle { display: inline-flex; }
+  body.logo-shown #mode-toggle { display: inline-flex; }
   #mode-toggle button { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 7px 14px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: 999px; transition: color 0.15s ease, background 0.15s ease; }
   #mode-toggle button:hover { color: var(--ink-muted); }
   #mode-toggle button.active { color: #fff; background: rgba(255,255,255,0.10); }
   #mode-toggle .sep { display: none; }
 
-  /* pipeline-stage nav (game mode) — LEVELS label + per-zone colored pills */
-  /* anchored to the top-left of the GAME half (just under the score), not over the article */
-  #stage-nav { position: fixed; top: 50px; left: calc(100vw - var(--stage-w) + 24px); z-index: 61; display: none; flex-direction: column; align-items: flex-start; gap: 7px; }
-  body.mode-game.past-hero #stage-nav { display: inline-flex; }
-  #stage-nav .nav-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-subtle); padding-left: 2px; }
-  #stage-nav .pills { display: flex; gap: 6px; }
+  /* LEVELS minimap — a segmented bar centered at the bottom of the game pane.
+     Appears only once the hero has fully scrolled off (logo-shown), like the score. */
+  #stage-nav { position: fixed; bottom: 22px; left: calc(100vw - var(--stage-w) / 2); transform: translateX(-50%); z-index: 61; display: none; flex-direction: row; align-items: center; gap: 14px; }
+  body.mode-game.logo-shown #stage-nav { display: inline-flex; }
+  #stage-nav .nav-label { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink); }
+  #stage-nav .pills {
+    display: flex; gap: 0;
+    background: rgba(10,11,13,0.74); border: 1px solid var(--hairline-strong); border-radius: 8px; overflow: hidden;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
   #stage-nav button {
     --c: var(--ink-tertiary);
-    font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-    padding: 7px 12px; border: 1px solid var(--hairline-strong); background: rgba(15,16,17,0.72);
-    color: var(--ink-subtle); border-radius: var(--radius-button); cursor: pointer;
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 10px 22px; border: 0; border-right: 1px solid var(--hairline); background: transparent;
+    color: var(--ink-subtle); cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   }
+  #stage-nav button:last-child { border-right: 0; }
   #stage-nav button:nth-of-type(1) { --c: #a78bfa; }   /* IDEA — purple */
   #stage-nav button:nth-of-type(2) { --c: #60a5fa; }   /* CODE — blue */
   #stage-nav button:nth-of-type(3) { --c: #4ade80; }   /* VALIDATION — green */
   #stage-nav button:nth-of-type(4) { --c: #f472b6; }   /* REVIEW — pink */
   #stage-nav button:nth-of-type(5) { --c: #22d3ee; }   /* PRODUCTION — cyan */
-  #stage-nav button:hover { color: var(--ink); border-color: color-mix(in srgb, var(--c) 65%, transparent); }
-  #stage-nav button.visited { color: var(--c); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
-  #stage-nav button.active { color: #fff; border-color: var(--c); background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: 0 0 0 1px var(--c), 0 0 16px color-mix(in srgb, var(--c) 45%, transparent); }
+  #stage-nav button:hover { color: var(--ink); background: color-mix(in srgb, var(--c) 10%, transparent); }
+  #stage-nav button.visited { color: var(--c); }
+  #stage-nav button.active { color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); }
 
   #music-toggle {
     position: fixed;

@@ -996,6 +996,7 @@ const FLOW_C = {
   white: "#f7f8f8",    // non-gate stage label
   parts: ["#6d7be8", "#4a90d9", "#3fb64f", "#d1a24a"],   // change types (data-viz palette)
 };
+const LABEL_FAM = '"Inter", ui-sans-serif, system-ui, sans-serif';
 // blend two #rrggbb hex colors → "rgb(r,g,b)" (t: 0=a, 1=b)
 function lerpHex(a, b, t) {
   const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
@@ -1009,7 +1010,7 @@ function makeFlow(canvas, openKeys) {
   const ctx = canvas.getContext("2d");
   const stages = FLOW_STAGES.map((s, i) => ({ ...s, i, open: s.gate ? openKeys.includes(s.key) : true }));
   const gates = stages.filter((s) => s.gate);
-  let W = 0, H = 0, cy = 0, RH = 0, nodeX = [], dpr = 1, particles = [], lastT = 0, spawnAcc = 0, running = false, t0 = 0;
+  let W = 0, H = 0, cy = 0, RH = 0, nodeX = [], dpr = 1, particles = [], lastT = 0, spawnAcc = 0, running = false, t0 = 0, labelFS = 11;
 
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -1021,6 +1022,23 @@ function makeFlow(canvas, openKeys) {
     RH = Math.min(44, H * 0.30);
     const padL = 32, padR = 32;
     nodeX = stages.map((s, i) => padL + (W - padL - padR) * (i / (stages.length - 1)));
+    // shrink the stage labels (11px → 9px) until the tightest adjacent pair
+    // clears — PRODUCTION is right-aligned, so it crowds REVIEW on narrow widths.
+    const last = stages.length - 1, MARGIN = 14;
+    for (let fs = 11; fs >= 9; fs--) {
+      ctx.font = "600 " + fs + "px " + LABEL_FAM; ctx.letterSpacing = "0.02em";
+      let minGap = Infinity;
+      for (let i = 0; i < last; i++) {
+        const wL = ctx.measureText(stages[i].label.toUpperCase()).width;
+        const wR = ctx.measureText(stages[i + 1].label.toUpperCase()).width;
+        const rightL = i === 0 ? nodeX[0] + wL : nodeX[i] + wL / 2;
+        const leftR = i + 1 === last ? nodeX[i + 1] - wR : nodeX[i + 1] - wR / 2;
+        minGap = Math.min(minGap, leftR - rightL);
+      }
+      labelFS = fs;
+      if (minGap >= MARGIN) break;
+    }
+    ctx.letterSpacing = "0px";
   }
   new ResizeObserver(resize).observe(canvas);
   resize();
@@ -1088,8 +1106,8 @@ function makeFlow(canvas, openKeys) {
     ctx.globalAlpha = 1;
     // stage labels (top) — locked gate red, opened gate green, other stages white
     const labelY = 22, last = stages.length - 1;
-    ctx.font = '600 13px "Inter", ui-sans-serif, system-ui, sans-serif';
-    ctx.letterSpacing = "0.04em";
+    ctx.font = "600 " + labelFS + "px " + LABEL_FAM;
+    ctx.letterSpacing = "0.02em";
     for (const s of stages) {
       const x = nodeX[s.i];
       ctx.fillStyle = s.gate ? (s.open ? FLOW_C.green : FLOW_C.red) : FLOW_C.white;

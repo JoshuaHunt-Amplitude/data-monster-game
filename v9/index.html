@@ -140,6 +140,18 @@
   #stage-nav button:hover { color: var(--ink); background: color-mix(in srgb, var(--c) 10%, transparent); }
   #stage-nav button.visited { color: var(--c); }
   #stage-nav button.active { color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); }
+  /* cookie "data nom" button — standalone square beside the LEVELS bar */
+  #stage-nav #btn-nom {
+    --c: #f0c674;
+    padding: 8px 13px; font-size: 16px; line-height: 1;
+    border: 1px solid var(--hairline-strong); border-radius: 8px;
+    background: rgba(10,11,13,0.74);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+  }
+  #stage-nav #btn-nom:hover { border-color: color-mix(in srgb, var(--c) 70%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent); }
+  #stage-nav #btn-nom:active { transform: translateY(1px); }
 
   #music-toggle {
     position: fixed;
@@ -409,6 +421,7 @@
     <button data-anchor="ch-review">Review</button>
     <button data-anchor="ch-receipts">Production</button>
   </div>
+  <button id="btn-nom" title="Data nom (E)" aria-label="Data nom">🍪</button>
 </nav>
 
 <!-- ============================ STORY ============================ -->
@@ -757,7 +770,7 @@ function onGameMode(on) {
   applyMusicMode(on);            // music plays in game mode only
   if (on) gameScrollSync();
 }
-const stageNavBtns = [...document.querySelectorAll("#stage-nav button")];
+const stageNavBtns = [...document.querySelectorAll("#stage-nav .pills button")];
 // Bidirectional sync ownership: the reader scrolling the article and the player
 // driving the monster both move the pair. Last interaction wins for ~500ms so the
 // two directions never fight. `suppressUntil` skips the scroll events WE trigger
@@ -846,6 +859,11 @@ stageNavBtns.forEach(b => b.addEventListener("click", () => {
   }
   if (anchor) { postToGame({ type: "teleport", worldX: anchor.worldX }); setStageActive(LEVEL_ANCHORS.indexOf(anchor)); }
 }));
+// cookie "data nom" — button click + E hotkey both tell the game to eat (game mode)
+document.getElementById("btn-nom")?.addEventListener("click", () => postToGame({ type: "eat" }));
+addEventListener("keydown", e => {
+  if ((e.key === "e" || e.key === "E") && document.body.classList.contains("mode-game")) postToGame({ type: "eat" });
+});
 // the game announces readiness on load, and posts its world-x while the player
 // drives it — move the article to follow (unless the reader is scrolling).
 addEventListener("message", e => {

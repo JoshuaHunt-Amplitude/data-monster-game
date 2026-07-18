@@ -777,6 +777,8 @@ window.addEventListener("message", e => {
   else if (d.type === "progress" && typeof d.worldX === "number" && !manualDriving()) scrollTargetX = d.worldX;
   // level pill clicked in the parent → warp the monster there with a poof
   else if (d.type === "teleport" && typeof d.worldX === "number") teleportToX(d.worldX);
+  // cookie button / E key in the parent → data nom nom
+  else if (d.type === "eat") startEat();
   // "Play with arrows" toggle (future) enables manual keyboard control in the embed
   else if (d.type === "enableKeys") keysEnabled = !!d.on;
 });
@@ -830,14 +832,24 @@ canvas.addEventListener("pointerdown", () => {
 });
 
 // "click to jump" affordance: a label stuck beside the cursor while the mouse is
-// over the game. Follows the pointer; hides when it leaves or before the game starts.
+// over the game. It follows the pointer, then fades after 3s of hovering so it
+// doesn't nag; re-arms once the pointer leaves and returns.
 const tapHint = document.getElementById("tap-hint");
+let tapHintTimer = 0, tapHintDone = false;
 canvas.addEventListener("mousemove", e => {
-  if (!started) { tapHint.classList.remove("show"); return; }
+  if (!started || tapHintDone) return;
   tapHint.style.transform = `translate(${e.clientX + 18}px, ${e.clientY + 6}px)`;
-  tapHint.classList.add("show");
+  if (!tapHint.classList.contains("show")) {   // first move this hover → show + start the 3s countdown
+    tapHint.classList.add("show");
+    clearTimeout(tapHintTimer);
+    tapHintTimer = setTimeout(() => { tapHint.classList.remove("show"); tapHintDone = true; }, 3000);
+  }
 });
-canvas.addEventListener("mouseleave", () => tapHint.classList.remove("show"));
+canvas.addEventListener("mouseleave", () => {
+  tapHint.classList.remove("show");
+  clearTimeout(tapHintTimer);
+  tapHintDone = false;   // re-arm for the next hover
+});
 
 // Touch controls (double-tap works here too via pressDir)
 function bindHold(id, onDown, onUp) {

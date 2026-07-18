@@ -15,6 +15,7 @@
 
     --primary: #5e6ad2;
     --primary-hover: #828fff;
+    --accent-grad: linear-gradient(180deg, #51A1F5, #9BE0F4);  /* "after" metric values */
 
     --ink: #f7f8f8;         /* headings, emphasis */
     --ink-muted: #d0d6e0;   /* body prose */
@@ -54,7 +55,7 @@
      below the fold so the page reads as an article by default. */
   #landing {
     position: relative; z-index: 1;
-    min-height: 66vh;
+    min-height: 80vh;
     background: var(--canvas);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center;
@@ -70,11 +71,12 @@
   /* scroll affordance under the buttons */
   .l-scrollcue {
     position: relative; z-index: 2; margin-top: 34px;
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
-    color: var(--ink-tertiary); display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
+    display: inline-flex; flex-direction: column; align-items: center; gap: 8px;
   }
-  .l-scrollcue .chev { font-size: 14px; animation: cuebob 1.8s ease-in-out infinite; }
-  @keyframes cuebob { 0%,100% { transform: translateY(0); opacity: 0.6; } 50% { transform: translateY(4px); opacity: 1; } }
+  .l-scrollcue .chev { font-size: 15px; animation: cuebob 1.8s ease-in-out infinite; }
+  @keyframes cuebob { 0%,100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(4px); opacity: 1; } }
   /* Unicorn Studio WebGL backdrop — hidden until the game button is hovered */
   #us-bg { position: absolute; inset: 0; z-index: 0; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
   #us-bg canvas { display: block; width: 100% !important; height: 100% !important; }
@@ -104,29 +106,39 @@
   #landing.us-active .l-choices button:not(.primary) { color: #fff; background: rgba(8, 9, 10, 0.55); }
 
   /* persistent mode toggle — appears once you scroll past the selector hero */
-  #mode-toggle { position: fixed; top: 18px; right: 24px; z-index: 61; display: none; align-items: center; }
+  /* mode toggle — segmented READ & PLAY / READ AS ARTICLE pill */
+  #mode-toggle { position: fixed; top: 16px; right: 24px; z-index: 61; display: none; align-items: center; gap: 2px; padding: 4px; background: rgba(15,16,17,0.72); border: 0.5px solid var(--hairline-strong); border-radius: 999px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
   body.past-hero #mode-toggle { display: inline-flex; }
-  #mode-toggle button { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; padding: 8px 10px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: var(--radius-button); transition: color 0.15s ease; }
+  #mode-toggle button { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 7px 14px; border: 0; background: transparent; color: var(--ink-subtle); cursor: pointer; border-radius: 999px; transition: color 0.15s ease, background 0.15s ease; }
   #mode-toggle button:hover { color: var(--ink-muted); }
-  #mode-toggle button.active { color: var(--ink); }
-  #mode-toggle .sep { color: var(--ink-tertiary); padding: 0 2px; }
+  #mode-toggle button.active { color: #fff; background: rgba(255,255,255,0.10); }
+  #mode-toggle .sep { display: none; }
 
-  /* pipeline-stage nav (game mode) — top-center TOC that also moves the monster */
-  #stage-nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 61; display: none; gap: 6px; }
+  /* pipeline-stage nav (game mode) — LEVELS label + per-zone colored pills */
+  #stage-nav { position: fixed; top: 14px; left: 24px; z-index: 61; display: none; flex-direction: column; align-items: flex-start; gap: 7px; }
   body.mode-game.past-hero #stage-nav { display: inline-flex; }
+  #stage-nav .nav-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-subtle); padding-left: 2px; }
+  #stage-nav .pills { display: flex; gap: 6px; }
   #stage-nav button {
-    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
-    padding: 7px 11px; border: 0.5px solid var(--hairline-strong); background: rgba(15,16,17,0.72);
+    --c: var(--ink-tertiary);
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 7px 12px; border: 1px solid var(--hairline-strong); background: rgba(15,16,17,0.72);
     color: var(--ink-subtle); border-radius: var(--radius-button); cursor: pointer;
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  #stage-nav button:hover { color: var(--ink); border-color: var(--ink-tertiary); }
-  #stage-nav button.active { color: #fff; background: #3B82F6; border-color: #3B82F6; }
+  #stage-nav button:nth-of-type(1) { --c: #a78bfa; }   /* IDEA — purple */
+  #stage-nav button:nth-of-type(2) { --c: #60a5fa; }   /* CODE — blue */
+  #stage-nav button:nth-of-type(3) { --c: #4ade80; }   /* VALIDATION — green */
+  #stage-nav button:nth-of-type(4) { --c: #f472b6; }   /* REVIEW — pink */
+  #stage-nav button:nth-of-type(5) { --c: #22d3ee; }   /* PRODUCTION — cyan */
+  #stage-nav button:hover { color: var(--ink); border-color: color-mix(in srgb, var(--c) 65%, transparent); }
+  #stage-nav button.visited { color: var(--c); border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+  #stage-nav button.active { color: #fff; border-color: var(--c); background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: 0 0 0 1px var(--c), 0 0 16px color-mix(in srgb, var(--c) 45%, transparent); }
 
   #music-toggle {
     position: fixed;
-    top: 20px; left: 28px;
+    bottom: 20px; left: 24px; top: auto;
     z-index: 61;
     display: none; align-items: center; gap: 8px;   /* music is a game-mode thing */
     padding: 6px 6px;
@@ -148,7 +160,7 @@
   #music-toggle:hover { color: var(--ink); }
 
   /* ============================ STORY (split) ============================ */
-  :root { --stage-w: 42vw; }
+  :root { --stage-w: 50vw; }
   .split { display: flex; align-items: flex-start; border-top: 0.5px solid var(--hairline); }
 
   .editorial {
@@ -179,6 +191,12 @@
     transition: opacity 0.3s ease, transform 0.3s ease;
   }
   body.past-hero.mode-article #toc { opacity: 1; transform: none; pointer-events: auto; }
+  /* floating Amplitude logo — sits above the TOC, links to the homepage */
+  #site-logo { display: none; position: fixed; left: max(32px, calc(50vw - 640px)); top: 44px; width: 36px; height: 36px; z-index: 45; opacity: 0; transform: translateY(8px); transition: opacity 0.3s ease, transform 0.3s ease; }
+  #site-logo svg { display: block; width: 100%; height: 100%; }
+  #site-logo:hover { opacity: 0.8 !important; }
+  body.mode-article #site-logo { display: block; }
+  body.logo-shown.mode-article #site-logo { opacity: 1; transform: none; }
   #toc .toc-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-tertiary); margin-bottom: 14px; }
   /* progress rail: grey track + a gradient fill whose height tracks reading progress */
   #toc ol { list-style: none; position: relative; padding-left: 14px; }
@@ -247,9 +265,9 @@
   code { font-family: var(--font-mono); font-size: 0.88em; color: var(--ink-muted); }
 
   details.toolchain { margin: 12px 0 0; }
-  details.toolchain summary { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em; color: var(--primary); cursor: pointer; list-style: none; }
+  details.toolchain summary { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em; background: linear-gradient(180deg, #51A1F5, #9BE0F4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: #9BE0F4; cursor: pointer; list-style: none; }
   details.toolchain summary::-webkit-details-marker { display: none; }
-  details.toolchain summary::after { content: " ▾"; color: var(--ink-tertiary); }
+  details.toolchain summary::after { content: " ▾"; color: var(--ink-tertiary); -webkit-text-fill-color: var(--ink-tertiary); }
   details.toolchain[open] summary::after { content: " ▴"; }
   details.toolchain ul { list-style: none; margin: 14px 0 0; padding: 16px 18px; background: var(--surface-2); border: 0.5px solid var(--hairline); border-radius: var(--radius-button); }
   details.toolchain li { font-family: var(--font-mono); font-size: 13px; line-height: 1.9; color: var(--ink-subtle); }
@@ -271,19 +289,29 @@
   .stat .delta { color: var(--ink-subtle); }
 
   /* receipts — 3× hero stat + grid, restrained */
-  .receipts-hero { text-align: center; padding: 44px 20px 36px; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); margin: 32px 0 0.5px; }
+  .receipts-hero { text-align: center; padding: 44px 20px 36px; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); margin: 32px 0; }
   .receipts-hero .big { font-size: clamp(64px, 9vw, 104px); font-variation-settings: "wght" 600; color: var(--ink); line-height: 0.95; letter-spacing: -0.03em; }
   .receipts-hero .lab { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 14px; }
-  .stats.receipts-grid { grid-template-columns: repeat(2, 1fr); margin: 0.5px 0 28px; border-radius: 0 0 var(--radius-card) var(--radius-card); }
+
+  /* metric grid — 2×2, no box; label on top, before → after (after in blue) */
+  .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px 52px; margin: 36px 0; }
+  .metrics .stat { background: none; padding: 0; }
+  .metrics .lab { font-family: var(--font-sans); font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; margin: 0 0 10px; line-height: 1.4; background: linear-gradient(180deg, #8F8F8F, #D5D5D5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: #D5D5D5; }
+  .metrics .big { font-size: 30px; font-variation-settings: "wght" 600; color: var(--ink); letter-spacing: -0.02em; line-height: 1.15; }
+  .metrics .big .arr { color: var(--ink-subtle); font-variation-settings: "wght" 400; margin: 0 2px; }
+  .metrics .big .to { background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: #9BE0F4; }
 
   /* sub-sections — flow in the column like a blog; no sidebar (that's for pull quotes only) */
   .block { margin: 40px 0; }
   .block h3 { font-size: 20px; font-variation-settings: "wght" 510; color: var(--ink); margin-bottom: 12px; letter-spacing: -0.01em; }
+  /* ch-foundations sub-sections render as elevated cards */
+  #ch-foundations .block { margin: 28px 0; padding: 30px 34px; background: var(--surface-1); border: 0.5px solid var(--hairline); border-radius: 16px; }
+  #ch-foundations .block > *:last-child { margin-bottom: 0; }
 
   /* diagram frame — neutral surface (particle motif is rebuilt in P3) */
   .diagram { margin: 40px 0; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); padding: 24px; }
   .diagram .dlabel { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: 16px; }
-  .flowviz { display: block; width: 100%; height: 152px; }
+  .flowviz { display: block; width: 100%; height: 164px; }
   .plegend { font-size: 13px; color: var(--ink-subtle); margin-top: 16px; line-height: 1.6; }
 
   .stage {
@@ -309,7 +337,7 @@
     .split { display: block !important; }
     .editorial { width: 100% !important; border-right: 0 !important; padding: 0 20px !important; }
     .reading { max-width: 680px !important; }
-    #toc { display: none !important; }
+    #toc, #site-logo { display: none !important; }
     body { overflow: auto !important; }
     .masthead { display: block; }
     section.chapter:first-of-type { padding-top: 28px; }
@@ -346,16 +374,21 @@
     <button data-mode="game" class="primary"><span class="ic">&#9654;</span> Read &amp; play game</button>
     <button data-mode="article"><span class="ic">&para;</span> Read as article</button>
   </div>
-  <div class="l-scrollcue" aria-hidden="true"><span>Scroll to read</span><span class="chev">&#8964;</span></div>
+  <div class="l-scrollcue" aria-hidden="true"><span>Scroll to read</span><span class="chev">&#8595;</span></div>
 </div>
 <div id="peek-fade" aria-hidden="true"></div>
 
 <!-- persistent mode toggle -->
 <div id="mode-toggle">
-  <button data-mode="game">Read &amp; play game</button>
+  <button data-mode="game">Read &amp; play</button>
   <span class="sep">/</span>
   <button data-mode="article">Read as article</button>
 </div>
+
+<!-- floating Amplitude logo → homepage (article mode) -->
+<a id="site-logo" href="https://amplitude.com" aria-label="Amplitude home">
+  <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M38.6767 17.9503C34.8598 17.6493 29.6971 17.4675 24.8548 17.3578C23.3873 11.6263 20.2664 1.2002 16.4133 1.2002C12.3847 1.2002 9.43368 9.04432 7.45139 17.1471L1.89806 17.068C0.854196 17.0531 0 17.8952 0 18.9392C0 19.9727 0.837849 20.8106 1.87139 20.8106H6.61899C6.05821 23.4645 5.63357 25.694 5.30874 27.7855C5.19313 28.5299 5.77007 29.2013 6.52339 29.2013C7.06547 29.2013 7.54328 28.8463 7.69982 28.3273C8.77669 24.7572 10.0323 20.8214 10.0323 20.8214H21.8159C23.4762 26.885 25.7802 36.975 29.6862 36.975C33.1472 36.975 34.8635 32.7433 36.3172 26.224C36.5303 25.2683 36.7564 24.4337 36.9879 23.7036C37.1143 23.3052 36.8168 22.8994 36.3998 22.896C36.1327 22.8939 35.8967 23.0707 35.8043 23.3213C35.4042 24.407 35.0556 25.4195 34.7953 26.148C33.2065 30.5948 32.3895 33.3442 30.6319 33.3442C28.3093 33.3442 26.6205 24.5149 25.6994 20.8214H38.5622C39.3563 20.8214 40 20.1777 40 19.3836C40 18.6339 39.4241 18.0093 38.6767 17.9503ZM10.8848 17.1907C12.7562 9.86648 15.0186 4.80919 16.272 4.80919C17.4038 4.80919 19.2899 11.4986 20.8568 17.2809C15.5403 17.1955 11.3171 17.1909 10.8848 17.1907Z" fill="white"/></svg>
+</a>
 
 <!-- floating table of contents (article mode) -->
 <nav id="toc" aria-label="Contents"><div class="toc-label">Contents</div><ol></ol></nav>
@@ -363,11 +396,14 @@
 <!-- pipeline-stage nav (game mode) — jumps to a chapter + moves the monster;
      doubles as the game-mode table of contents -->
 <nav id="stage-nav" aria-label="Pipeline stages">
-  <button data-anchor="ch-intro">Idea</button>
-  <button data-anchor="ch-foundations">Code</button>
-  <button data-anchor="ch-validation">Validation</button>
-  <button data-anchor="ch-review">Review</button>
-  <button data-anchor="ch-receipts">Production</button>
+  <span class="nav-label">Levels</span>
+  <div class="pills">
+    <button data-anchor="ch-intro">Idea</button>
+    <button data-anchor="ch-foundations">Code</button>
+    <button data-anchor="ch-validation">Validation</button>
+    <button data-anchor="ch-review">Review</button>
+    <button data-anchor="ch-receipts">Production</button>
+  </div>
 </nav>
 
 <!-- ============================ STORY ============================ -->
@@ -404,7 +440,6 @@
         <h2 class="title">The gates slowing us down</h2>
         <p>Think of software development as a pipeline. An idea becomes code, the code gets validated and reviewed, and then it gets deployed to production. That path is the same whether the change is a one-line bug fix, a new feature release, or a sweeping migration across the codebase. Simple enough. But for us, it slowed down at a few specific steps.</p>
         <div class="diagram" data-diagram="pipeline">
-          <div class="dlabel">The pipeline &middot; Idea &rarr; Code &rarr; Validation &rarr; Review &rarr; Production</div>
           <canvas class="flowviz" data-flow="constrained" aria-label="Changes flowing through the delivery pipeline, bunching up at the manual gates"></canvas>
         </div>
         <p>Before we made a bet on our software factory, most steps in the pipeline were manual. Engineers worked in local environments they had to assemble themselves. Setting one up meant figuring out which dependencies (and the dependencies of dependencies) were needed for testing, then spinning them up. The local frontend alone could take up to 3 minutes to start, and CI runs could stretch beyond 30 minutes. On a bad day, an engineer could lose most of their time just setting up and shipping a single change.</p>
@@ -417,11 +452,11 @@
         <h2 class="title">Rebuilding the foundations</h2>
         <p>When Stripe built their coding agent, they found something interesting: What&rsquo;s good for agents is good for humans, too. We agree.</p>
         <p>But we hadn&rsquo;t made it a priority. For years, we optimized for <em>what</em> we shipped, but agents forced us to finally fix <em>how</em> we ship. Brightside? They also helped us improve much faster than expected.</p>
-        <div class="stats">
-          <div class="stat"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
-          <div class="stat"><div class="big">40 min &rarr; 15 min</div><div class="lab">Backend CI &middot; <span class="delta">2&ndash;3&times; faster</span></div></div>
-          <div class="stat"><div class="big">3 min &rarr; 28 sec</div><div class="lab">Local app start &middot; <span class="delta">~6&times; faster</span></div></div>
-          <div class="stat"><div class="big">1&ndash;4 days &rarr; 10&ndash;15 min</div><div class="lab">Week 0 setup</div></div>
+        <div class="metrics">
+          <div class="stat"><div class="lab">Frontend CI &middot; 7.5&ndash;10&times; faster</div><div class="big">30 min <span class="arr">&rarr;</span> <span class="to">3&ndash;4 min</span></div></div>
+          <div class="stat"><div class="lab">Local app start &middot; ~6&times; faster</div><div class="big">3 min <span class="arr">&rarr;</span> <span class="to">28 sec</span></div></div>
+          <div class="stat"><div class="lab">Backend CI &middot; 2&ndash;3&times; faster</div><div class="big">40 min <span class="arr">&rarr;</span> <span class="to">15 min</span></div></div>
+          <div class="stat"><div class="lab">Week 0 setup</div><div class="big">1&ndash;4 days <span class="arr">&rarr;</span> <span class="to">10&ndash;15 min</span></div></div>
         </div>
         <div class="block">
           <h3>One containerized environment</h3>
@@ -474,7 +509,7 @@
         <p>Validation is where we confirm a change does what it&rsquo;s supposed to do. Every change gets validated before it ships, but it was slow. Spinning up the test build used to take 25 minutes, which was long enough that you&rsquo;d start another task while you waited, then lose time and focus switching back and forth.</p>
         <p>So we made it faster. Automated checks handle most of it, but some things you only catch by trying the change yourself. For that, you can ship a PR and get a working preview in a couple of minutes with no local setup.</p>
         <div class="diagram" data-diagram="gate-validation">
-          <div class="dlabel">Unlocking the Validation gate</div>
+          <div class="dlabel">Opening the Validation gate</div>
           <canvas class="flowviz" data-flow="open-validate" aria-label="The Validation gate opens and changes stop piling up behind it"></canvas>
         </div>
         <div class="block">
@@ -492,9 +527,9 @@
         <p>Engineers used to spend a big part of their day reviewing other people&rsquo;s changes, or waiting on someone to review theirs. Across the team, review was one of the slowest steps in the pipeline.</p>
         <p>We changed that by raising our confidence in the code before it reaches review. Stronger linting rules and a design system that handles most of the complexity now cover a lot of what a reviewer used to check by hand. On top of that, an automated reviewer runs on every PR, and a risk model approves the low-risk changes on its own.</p>
         <p><strong>The average PR is now approved and merged 4.5x faster.</strong></p>
-        <div class="stats"><div class="stat"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div></div>
+        <div class="metrics"><div class="stat"><div class="lab">PR cycle time &middot; 4.5&times; faster</div><div class="big">4.2 hrs <span class="arr">&rarr;</span> <span class="to">55 min</span></div></div></div>
         <div class="diagram" data-diagram="gate-review">
-          <div class="dlabel">Unlocking the Review gate</div>
+          <div class="dlabel">Opening the Review gate</div>
           <canvas class="flowviz" data-flow="open-review" aria-label="Low-risk changes flow straight through as the Review and approval gates open"></canvas>
         </div>
         <div class="block">
@@ -523,7 +558,7 @@
         </div>
         <div class="block">
           <h3>Let anyone ship</h3>
-          <div class="stats"><div class="stat"><div class="big">~5%</div><div class="lab">Non-engineer PRs</div></div></div>
+          <div class="metrics"><div class="stat"><div class="lab">Non-engineer PRs</div><div class="big"><span class="to">~5%</span></div></div></div>
           <p>The biggest positive was handing over the keys to the kingdom and letting non-engineers ship code. Designers, PMs, and even marketers use Claude and Cursor to fix bugs and make frontend improvements.</p>
           <p>The best part is that they happen much faster because there&rsquo;s no more handoff to eng. And the fixes are often better because the person closest to the problem makes the fix. Jingshu Zhao, Principal Designer at Amplitude, started with a small PR for a button-alignment issue. Soon after, she used Claude Code to reorganize our navigation and sunset low-usage sections.</p>
           <p>Although non-engineers only make up 5% of our PRs right now, they&rsquo;re high-value changes, and that number continues to grow.</p>
@@ -547,11 +582,11 @@
           <div class="big">3&times;</div>
           <div class="lab">more PRs shipped</div>
         </div>
-        <div class="stats receipts-grid">
-          <div class="stat"><div class="big">30 min &rarr; 3&ndash;4 min</div><div class="lab">Frontend CI &middot; <span class="delta">7.5&ndash;10&times; faster</span></div></div>
-          <div class="stat"><div class="big">4.2 hrs &rarr; 55 min</div><div class="lab">PR cycle time &middot; <span class="delta">4.5&times; faster</span></div></div>
-          <div class="stat"><div class="big">715 &rarr; 319</div><div class="lab">Bug reports &middot; <span class="delta">&darr; 50%</span></div></div>
-          <div class="stat"><div class="big">~5%</div><div class="lab">PRs from non-engineers</div></div>
+        <div class="metrics">
+          <div class="stat"><div class="lab">Frontend CI &middot; 7.5&ndash;10&times; faster</div><div class="big">30 min <span class="arr">&rarr;</span> <span class="to">3&ndash;4 min</span></div></div>
+          <div class="stat"><div class="lab">PR cycle time &middot; 4.5&times; faster</div><div class="big">4.2 hrs <span class="arr">&rarr;</span> <span class="to">55 min</span></div></div>
+          <div class="stat"><div class="lab">Bug reports &middot; &darr; 50%</div><div class="big">715 <span class="arr">&rarr;</span> <span class="to">319</span></div></div>
+          <div class="stat"><div class="lab">PRs from non-engineers</div><div class="big"><span class="to">~5%</span></div></div>
         </div>
         <p>Now that building is cheap, the game is knowing what to build and shipping it first. That&rsquo;s the real speedrun.</p>
       </section>
@@ -687,6 +722,9 @@ const heroEl = document.getElementById("landing");
 const peekFade = document.getElementById("peek-fade");
 function updatePastHero() {
   document.body.classList.toggle("past-hero", storyEl.getBoundingClientRect().top < innerHeight * 0.12);
+  // the logo sits higher than the TOC, so hold it back until the hero (and its
+  // frame border) has fully scrolled off the top — otherwise it pops in early.
+  document.body.classList.toggle("logo-shown", heroEl.getBoundingClientRect().bottom < 0);
   const heroH = heroEl.offsetHeight || 1;
   peekFade.style.opacity = Math.max(0, Math.min(1, 1 - window.scrollY / (heroH * 0.5)));
 }
@@ -723,6 +761,13 @@ let lastUserScroll = -1e9;
 let suppressUntil = 0;
 function articleDriving() { return performance.now() - lastUserScroll < 500; }
 function anchorAbsTop(id) { const el = document.getElementById(id); return el ? el.getBoundingClientRect().top + window.scrollY : 0; }
+// current pill = active (filled + glow); earlier pills = visited (accent border)
+function setStageActive(active) {
+  stageNavBtns.forEach((b, i) => {
+    b.classList.toggle("active", i === active);
+    b.classList.toggle("visited", i < active);
+  });
+}
 function highlightStage(worldX) {
   const A = LEVEL_ANCHORS; let active = 0;
   for (let i = 0; i < A.length; i++) if (worldX >= A[i].worldX) active = i;
@@ -730,7 +775,7 @@ function highlightStage(worldX) {
     const t = (worldX - A[active].worldX) / (A[active + 1].worldX - A[active].worldX);
     if (t >= 0.5) active += 1;
   }
-  stageNavBtns.forEach((b, i) => b.classList.toggle("active", i === active));
+  setStageActive(active);
 }
 // invert the anchor map: monster world-x → the scrollY that parks that anchor on
 // the reference line, so the article follows the player.
@@ -770,16 +815,22 @@ function gameScrollSync() {
     }
   }
   postToGame({ type: "progress", worldX });
-  stageNavBtns.forEach((b, i) => b.classList.toggle("active", i === active));
+  setStageActive(active);
 }
 addEventListener("scroll", () => {
   if (performance.now() < suppressUntil) return;   // a scroll WE triggered (game-driven) — don't echo it
   lastUserScroll = performance.now();
+  gameScrollTarget = null;                           // reader took over → release the game's scroll follow
   gameScrollSync();
 }, { passive: true });
-// stage-nav clicks: scroll to the chapter (the scroll sync then moves the monster)
+// stage-nav clicks: TELEPORT — snap the article to the chapter and warp the
+// monster there with a poof (instant, not a slow scroll-ease).
 stageNavBtns.forEach(b => b.addEventListener("click", () => {
-  document.getElementById(b.dataset.anchor)?.scrollIntoView({ behavior: "smooth" });
+  const anchor = LEVEL_ANCHORS.find(a => a.id === b.dataset.anchor);
+  suppressUntil = performance.now() + 300;                // our own snap — don't echo as a progress message
+  gameScrollTarget = null;
+  document.getElementById(b.dataset.anchor)?.scrollIntoView({ behavior: "instant" });
+  if (anchor) { postToGame({ type: "teleport", worldX: anchor.worldX }); setStageActive(LEVEL_ANCHORS.indexOf(anchor)); }
 }));
 // the game announces readiness on load, and posts its world-x while the player
 // drives it — move the article to follow (unless the reader is scrolling).
@@ -790,11 +841,34 @@ addEventListener("message", e => {
     onGameMode(document.body.classList.contains("mode-game"));
   } else if (d.type === "worldX" && typeof d.worldX === "number") {
     if (!document.body.classList.contains("mode-game") || articleDriving()) return;
-    suppressUntil = performance.now() + 160;
-    window.scrollTo(0, worldXToScrollY(d.worldX));
+    // set a target; a rAF loop eases the article toward it in small steps, so the
+    // scroll glides continuously instead of snapping per message / per anchor.
+    gameScrollTarget = worldXToScrollY(d.worldX);
+    lastWorldXAt = performance.now();
     highlightStage(d.worldX);
   }
 });
+
+// Smoothly follow the monster: ease window scroll toward the game's target with
+// INSTANT scrolls (html{scroll-behavior:smooth} would otherwise animate — and
+// compound — every step, which is what made arrow-key control feel janky).
+let gameScrollTarget = null;
+let lastWorldXAt = 0;
+function gameScrollEase() {
+  if (gameScrollTarget != null) {
+    if (performance.now() - lastWorldXAt > 400) {
+      gameScrollTarget = null;                        // player stopped driving → hand control back
+    } else if (document.body.classList.contains("mode-game") && !articleDriving()) {
+      const cur = window.scrollY, d = gameScrollTarget - cur;
+      if (Math.abs(d) > 0.5) {
+        suppressUntil = performance.now() + 120;
+        window.scrollTo({ top: cur + d * 0.18, behavior: "auto" });
+      }
+    }
+  }
+  requestAnimationFrame(gameScrollEase);
+}
+requestAnimationFrame(gameScrollEase);
 
 // hovering "Read & play game" fades in the Unicorn Studio backdrop and turns
 // the pixel title white — both only while hovering that button.
@@ -916,10 +990,20 @@ const FLOW_OPEN = {
   "open-review":   ["validate", "review"],
 };
 const FLOW_C = {
-  edge: "rgba(138,143,152,0.24)",
-  ink: "#d0d6e0", dim: "#4a4e57", sub: "#8a8f98", green: "#3fb950",
+  ribbon: "#c3c8d0",   // open/straight ribbon — soft light gray
+  red: "#f2503c",      // constrained / locked gate
+  green: "#3fb950",    // opened gate
+  white: "#f7f8f8",    // non-gate stage label
   parts: ["#6d7be8", "#4a90d9", "#3fb64f", "#d1a24a"],   // change types (data-viz palette)
 };
+// blend two #rrggbb hex colors → "rgb(r,g,b)" (t: 0=a, 1=b)
+function lerpHex(a, b, t) {
+  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+  const r = Math.round((A >> 16) + (((B >> 16) - (A >> 16)) * t));
+  const g = Math.round(((A >> 8) & 255) + ((((B >> 8) & 255) - ((A >> 8) & 255)) * t));
+  const bl = Math.round((A & 255) + (((B & 255) - (A & 255)) * t));
+  return `rgb(${r},${g},${bl})`;
+}
 
 function makeFlow(canvas, openKeys) {
   const ctx = canvas.getContext("2d");
@@ -933,8 +1017,8 @@ function makeFlow(canvas, openKeys) {
     W = r.width; H = r.height;
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cy = Math.round(H * 0.40);
-    RH = Math.min(46, H * 0.32);
+    cy = Math.round(H * 0.56);
+    RH = Math.min(44, H * 0.30);
     const padL = 32, padR = 32;
     nodeX = stages.map((s, i) => padL + (W - padL - padR) * (i / (stages.length - 1)));
   }
@@ -970,16 +1054,30 @@ function makeFlow(canvas, openKeys) {
   function draw(now) {
     ctx.clearRect(0, 0, W, H);
     const x0 = nodeX[0], x1 = nodeX[nodeX.length - 1];
-    // ribbon silhouette
-    ctx.strokeStyle = FLOW_C.edge; ctx.lineWidth = 1;
-    for (const sign of [-1, 1]) {
-      ctx.beginPath();
-      for (let x = x0; x <= x1; x += 4) {
-        const y = cy + sign * halfH(x);
-        x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-      ctx.stroke();
+    // dashed stage guides — red under a locked gate, green once opened, faint gray otherwise
+    const dashTop = 34, dashBot = H - 12;
+    ctx.save();
+    ctx.setLineDash([3, 6]); ctx.lineWidth = 1;
+    for (const s of stages) {
+      const x = nodeX[s.i];
+      if (s.gate) { ctx.strokeStyle = s.open ? FLOW_C.green : FLOW_C.red; ctx.globalAlpha = 0.72; }
+      else { ctx.strokeStyle = FLOW_C.ribbon; ctx.globalAlpha = 0.26; }
+      ctx.beginPath(); ctx.moveTo(x, dashTop); ctx.lineTo(x, dashBot); ctx.stroke();
     }
+    ctx.restore();
+    // ribbon silhouette — drawn in short segments so it turns red where a locked gate pinches it
+    ctx.lineWidth = 1.4;
+    for (const sign of [-1, 1]) {
+      let px = x0, py = cy + sign * halfH(x0);
+      for (let x = x0 + 4; x <= x1; x += 4) {
+        const y = cy + sign * halfH(x), m = pinch(x);
+        ctx.strokeStyle = lerpHex(FLOW_C.ribbon, FLOW_C.red, m);
+        ctx.globalAlpha = 0.5 + 0.45 * m;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
+        px = x; py = y;
+      }
+    }
+    ctx.globalAlpha = 1;
     // packets
     for (const p of particles) {
       const hh = halfH(p.x);
@@ -988,26 +1086,17 @@ function makeFlow(canvas, openKeys) {
       ctx.fillStyle = p.col; ctx.globalAlpha = 0.92; ctx.fill();
     }
     ctx.globalAlpha = 1;
-    // gate posts
-    for (const g of gates) {
-      const x = nodeX[g.i], hh = halfH(x), col = g.open ? FLOW_C.green : FLOW_C.sub;
-      ctx.strokeStyle = col; ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.moveTo(x, cy - hh - 9); ctx.lineTo(x, cy - hh - 2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x, cy + hh + 2); ctx.lineTo(x, cy + hh + 9); ctx.stroke();
-    }
-    // stage labels — a playhead lights each up in turn
-    const active = Math.floor(((now - t0) / 1100) % stages.length);
-    ctx.textAlign = "center";
-    const labelY = cy + RH + 26;
+    // stage labels (top) — locked gate red, opened gate green, other stages white
+    const labelY = 22, last = stages.length - 1;
+    ctx.font = '600 13px "Inter", ui-sans-serif, system-ui, sans-serif';
+    ctx.letterSpacing = "0.04em";
     for (const s of stages) {
       const x = nodeX[s.i];
-      ctx.fillStyle = FLOW_C.dim; ctx.fillRect(x - 1.5, cy - 1.5, 3, 3);
-      let col = s.gate ? (s.open ? FLOW_C.green : FLOW_C.sub) : FLOW_C.dim;
-      if (s.i === active) col = FLOW_C.ink;
-      ctx.fillStyle = col;
-      ctx.font = (s.i === active ? "600 " : "") + "10px ui-monospace, SFMono-Regular, monospace";
+      ctx.fillStyle = s.gate ? (s.open ? FLOW_C.green : FLOW_C.red) : FLOW_C.white;
+      ctx.textAlign = s.i === 0 ? "left" : (s.i === last ? "right" : "center");
       ctx.fillText(s.label.toUpperCase(), x, labelY);
     }
+    ctx.letterSpacing = "0px"; ctx.textAlign = "center";
   }
 
   return {

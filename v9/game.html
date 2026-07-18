@@ -1243,12 +1243,11 @@ function drawGates(camX, part) {
       ctx.fillRect(bx - 55, top + gh * 0.12, 110, H - (top + gh * 0.12));
       // left half of the gate
       ctx.drawImage(gateImg, 0, 0, GATE.W * sp, GATE.H, left, top, gw * sp, gh);
-      // animated lightning zap in the middle of the opening (behind the monster)
+      // single-frame lightning zap in the middle of the opening (behind the monster)
       if (zapReady()) {
         const zfw = zapImg.naturalWidth / ZAP.frames;
         const zh = ZAP.screenH, zw = zfw * (zh / zapImg.naturalHeight);
-        const zf = Math.floor(performance.now() / 1000 * ZAP.fps) % ZAP.frames;
-        ctx.drawImage(zapImg, zf * zfw, 0, zfw, zapImg.naturalHeight, bx - zw / 2, (top + gh * 0.42) - zh / 2, zw, zh);
+        ctx.drawImage(zapImg, 0, 0, Math.floor(zfw), zapImg.naturalHeight, bx - zw / 2, (top + gh * 0.42) - zh / 2, zw, zh);
       }
     } else {
       // right half (right post + chevron panel) — occludes the monster
@@ -1312,10 +1311,6 @@ function drawGoalFlag(camX, time) {
   ctx.closePath();
   ctx.fill();
   if (litT > 0) ctx.restore();
-  // mark
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "700 20px 'Geist Mono', monospace";
-  ctx.fillText("A", fx + 24, topY + 6 + segH / 2 + 7);
 }
 
 /* Draw collectibles. Procedural placeholders (spinning coin / faceted diamond)

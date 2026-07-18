@@ -115,7 +115,8 @@
   #mode-toggle .sep { display: none; }
 
   /* pipeline-stage nav (game mode) — LEVELS label + per-zone colored pills */
-  #stage-nav { position: fixed; top: 14px; left: 24px; z-index: 61; display: none; flex-direction: column; align-items: flex-start; gap: 7px; }
+  /* anchored to the top-left of the GAME half (just under the score), not over the article */
+  #stage-nav { position: fixed; top: 50px; left: calc(100vw - var(--stage-w) + 24px); z-index: 61; display: none; flex-direction: column; align-items: flex-start; gap: 7px; }
   body.mode-game.past-hero #stage-nav { display: inline-flex; }
   #stage-nav .nav-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-subtle); padding-left: 2px; }
   #stage-nav .pills { display: flex; gap: 6px; }

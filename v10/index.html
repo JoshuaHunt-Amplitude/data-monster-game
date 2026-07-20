@@ -87,6 +87,9 @@
   .l-title canvas.speedrunning { width: min(86vw, 1000px); }
   .l-title canvas.software { width: min(60vw, 700px); margin-top: 1vw; }
   .l-by { position: relative; z-index: 2; margin-top: 30px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-subtle); }
+  /* speedrun category tag — the "(any%)" from the title */
+  .l-cat { position: relative; z-index: 2; margin-top: 18px; display: inline-block; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-subtle); border: 0.5px solid var(--hairline-strong); border-radius: 999px; padding: 4px 13px; }
+  #landing.us-active .l-cat { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
   .l-choices { position: relative; z-index: 2; margin-top: 40px; display: inline-flex; border: 0.5px solid var(--hairline-strong); border-radius: var(--radius-button); overflow: hidden; }
   .l-choices button {
     font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em;
@@ -350,6 +353,16 @@
   /* ch-foundations sub-sections render as elevated cards */
   #ch-foundations .block { margin: 28px 0; padding: 30px 34px; background: var(--surface-1); border: 0.5px solid var(--hairline); border-radius: 16px; }
   #ch-foundations .block > *:last-child { margin-bottom: 0; }
+  /* foundation "aura" — a soft full-bleed underlay so this reads as the layer
+     beneath the whole pipeline, not a single step in it */
+  #ch-foundations { position: relative; }
+  #ch-foundations::before {
+    content: ""; position: absolute; z-index: -1; pointer-events: none;
+    left: 50%; transform: translateX(-50%); width: 100vw; top: 0; bottom: 0;
+    background:
+      radial-gradient(70% 44% at 50% 3%, rgba(94, 106, 210, 0.20), transparent 68%),
+      linear-gradient(180deg, rgba(94, 106, 210, 0.08), rgba(94, 106, 210, 0.025) 45%, transparent 88%);
+  }
 
   /* diagram frame — neutral surface (particle motif is rebuilt in P3) */
   .diagram { margin: 40px 0; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); padding: 24px; }
@@ -412,6 +425,7 @@
     <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
     <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
   </div>
+  <div class="l-cat">any%</div>
   <div class="l-by">How we 3&times;&rsquo;d PRs in 6 months, and how you can too</div>
   <div class="l-choices">
     <button data-mode="game" class="primary"><span class="ic">&#9654;</span> Read &amp; play game</button>

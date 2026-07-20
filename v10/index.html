@@ -358,7 +358,6 @@
   .diagram { margin: 40px 0; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); padding: 24px; }
   .diagram .dlabel { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: 16px; }
   .flowviz { display: block; width: 100%; height: 164px; }
-  .devscene { display: block; width: 100%; height: 150px; }
   .plegend { font-size: 13px; color: var(--ink-subtle); margin-top: 16px; line-height: 1.6; }
 
   .stage {
@@ -476,7 +475,7 @@
 
       <section class="chapter" id="ch-intro">
         <h2 class="title">Have you ever watched someone try to <span class="tip" data-tip="Completing a game as fast as possible, often condensing a game built for hours of playtime and finishing it in minutes.">speedrun</span> a video game?</h2>
-        <p>It takes most people hours to beat a game like Super Mario Bros. The world record is just under five minutes. Speedrunning is a competitive hobby where players try to finish a game as fast as possible, down to the second.</p>
+        <p>It takes most people hours to beat a game like Super Mario Bros. The <a href="https://www.speedrun.com/smb1" target="_blank" rel="noopener">world record</a> is just under five minutes. Speedrunning is a competitive hobby where players try to finish a game as fast as possible, down to the second.</p>
         <p>You might think it takes superhuman reflexes. Do the same thing every time, just mechanically faster. It&rsquo;s not that simple. Speedrunners spend most of their time studying the route, finding shortcuts, and engineering the system and environment to go faster each time.</p>
         <p>Building our autonomous software factory feels the same. We wanted to see how fast we could get software into the hands of our customers.</p>
         <p><strong>After six months, we&rsquo;ve 3x&rsquo;d our PRs.</strong></p>
@@ -484,11 +483,11 @@
 
       <section class="chapter" id="ch-why">
         <h2 class="title">Why does speed matter, really?</h2>
-        <p>We wanted to ship more PRs, and speed is how you do that with the same headcount. On the surface, that might sound like a vanity metric. PRs can be artificially inflated, and more code isn&rsquo;t inherently valuable. But teams used to think the same about engagement, until they saw how it drives stickiness, retention, and growth.</p>
+        <p>We wanted to ship more PRs, and speed is how you do that with the same headcount. On the surface, that might sound like a vanity metric. PRs can be artificially inflated, and more code isn&rsquo;t inherently valuable. But teams used to think the same about engagement, until they saw how it drives <a href="https://articles.sequoiacap.com/engagement-drives-stickiness-drives-retention-drives-growth" target="_blank" rel="noopener">stickiness, retention, and growth</a>.</p>
         <p>PRs are a leading indicator of growth because each one is an experiment. A faster software factory means you can put more ideas in front of your customers to figure out what works. The goal is to run more experiments and see good ideas surface much faster.</p>
         <div class="pull">
           <q>Agentic coding assistants have led to a new builder&rsquo;s block, where the holdup is deciding what to build.</q>
-          <span class="cite">&mdash; Andrew Ng, DeepLearning.AI founder</span>
+          <span class="cite">&mdash; <a href="https://x.com/AndrewYNg" target="_blank" rel="noopener">Andrew Ng</a>, <a href="https://www.deeplearning.ai/the-batch/how-to-get-through-the-product-management-bottleneck" target="_blank" rel="noopener">DeepLearning.AI</a> founder</span>
         </div>
         <p>AI made building cheap. Knowing what to build is the new game. Speeding up your software factory lets you take more shots at what to build. With the same team, that&rsquo;s how you out-iterate everyone else.</p>
         <p>It&rsquo;s also how you move engineers from <em>in</em> the software loop, doing every step, to <em>on</em> the loop, steering it.</p>
@@ -506,7 +505,7 @@
         <h2 class="title">The pipeline gates slowing us down</h2>
         <p>Before we made a bet on our software factory, most steps in the pipeline were manual. Engineers worked in local environments they had to assemble themselves. Setting one up meant figuring out which dependencies (and the dependencies of dependencies) were needed for testing, then spinning them up. The local frontend alone could take up to 3 minutes to start, and CI runs could stretch beyond 30 minutes. On a bad day, an engineer could lose most of their time just setting up and shipping a single change.</p>
         <p>Despite its flaws, this design worked for years because writing code was the slowest part of the system. It was a natural limitation on how many changes could enter the pipeline at once. But agents changed that. Faster code generation meant that a trickle of PRs suddenly became a flood, and the manual validation and review became the stoppage points.</p>
-        <p>This is the <strong>Theory of Constraints</strong>, the idea that every system has one main bottleneck that limits how fast the whole thing can move. Speeding up one part of the system moves the goal post to the next-slowest step. What a beautifully messy problem to solve! We were up for the challenge.</p>
+        <p>This is the <strong><a href="https://www.tocinstitute.org/theory-of-constraints.html" target="_blank" rel="noopener">Theory of Constraints</a></strong>, the idea that every system has one main bottleneck that limits how fast the whole thing can move. Speeding up one part of the system moves the goal post to the next-slowest step. What a beautifully messy problem to solve! We were up for the challenge.</p>
         <p>For us, the heaviest gates to push through were the ones that stayed largely manual: validation and review. Like any speedrun, we had to shave time off the route.</p>
       </section>
 
@@ -514,7 +513,7 @@
         <h2 class="title">Rebuilding the pipeline&rsquo;s foundations</h2>
         <p>So we rebuilt the foundations under the pipeline and opened those two gates. The <span class="tip" data-tip="The time from opening a pull request, through validation, review, and approval, to merging it.">PR cycle time</span> is now under an hour, which is 7x faster than before. That&rsquo;s 2.5 hours below the industry benchmark.</p>
         <div class="metrics"><div class="stat"><div class="lab">PR cycle time &middot; 7x faster</div><div class="big">5.2 hrs <span class="arr">&rarr;</span> <span class="to">44 min</span></div></div></div>
-        <p>When Shopify built their coding agent, they found something interesting: What&rsquo;s good for agents is good for humans, too. We agree. An agent needs the same things a good engineer does: a clean codebase, fast feedback when something breaks, and an environment that comes up the same way every time. Fix those for agents, and engineers get the benefits too.</p>
+        <p>When <a href="https://shopify.engineering/under-the-river" target="_blank" rel="noopener">Shopify</a> built their coding agent, they found something interesting: What&rsquo;s good for agents is good for humans, too. We agree. An agent needs the same things a good engineer does: a clean codebase, fast feedback when something breaks, and an environment that comes up the same way every time. Fix those for agents, and engineers get the benefits too.</p>
         <p>But we hadn&rsquo;t made these fixes a priority. For years, we optimized for <em>what</em> we shipped, but agents forced us to finally fix <em>how</em> we ship. Brightside? They also helped us improve much faster than expected.</p>
         <p>That improvement started with the foundations the pipeline runs on. We rebuilt three areas: the CI every PR passes through, the local environment engineers work in, and the legacy patterns that tripped up humans and agents. These changes made every step of the pipeline faster.</p>
         <!-- [design] foundation "cloud/aura" animation wrapping the whole pipeline (vs. a single step) -->
@@ -522,11 +521,11 @@
           <h3>Custom local dev CLI</h3>
           <div class="metrics"><div class="stat"><div class="lab">Local app start &middot; ~6x faster</div><div class="big">3 min <span class="arr">&rarr;</span> <span class="to">28 sec</span></div></div></div>
           <p>We run a large, sprawling set of services, and getting them all running locally was a slog. Local setup was app-specific, so to run the full stack, you had to stand up several environments, keep 5+ processes alive, and hope nothing broke along the way. Putting each service in its own container wouldn&rsquo;t have helped because machines would run out of memory.</p>
-          <p>So we built a CLI tool that uses <code>devbox</code> to inject dependencies, which keeps startup times fast and less resource-intensive than Docker. It lets engineers run our large infrastructure locally with one command, so the full stack comes up in 28 seconds.</p>
+          <p>So we built a CLI tool that uses <a href="https://www.jetify.com/devbox" target="_blank" rel="noopener"><code>devbox</code></a> to inject dependencies, which keeps startup times fast and less resource-intensive than <a href="https://www.docker.com/" target="_blank" rel="noopener">Docker</a>. It lets engineers run our large infrastructure locally with one command, so the full stack comes up in 28 seconds.</p>
           <details class="toolchain">
             <summary>See how it works</summary>
             <ul>
-              <li><code>devbox</code> uses NixOS to inject dependencies per shell, keeping environments fast and lightweight.</li>
+              <li><code>devbox</code> uses <a href="https://nixos.org/" target="_blank" rel="noopener">NixOS</a> to inject dependencies per shell, keeping environments fast and lightweight.</li>
               <li>The CLI is a task multiplexer that abstracts how each app server starts.</li>
               <li>It finds services by walking the filesystem or an ENV override, which matters now that engineers use worktrees across a multi-repo setup.</li>
               <li>A one-time set of <code>make</code> tasks stands up the database with Docker.</li>
@@ -538,7 +537,7 @@
           <div class="metrics"><div class="stat"><div class="lab">Frontend CI &middot; 7.5&ndash;10x faster</div><div class="big">30 min <span class="arr">&rarr;</span> <span class="to">3&ndash;4 min</span></div></div></div>
           <p>Our frontend CI had been creeping up for years and began approaching 30 minutes. We tackled it in three ways:</p>
           <ul class="prose-list">
-            <li><strong>Build only what changed.</strong> We leaned into our Turborepo monorepo setup with affected-based builds, so CI only touches the packages that a change actually impacts rather than rebuilding everything. We also compiled packages so their outputs could be cached and reused, and paired that with TypeScript isolated declarations so type info is emitted per package without cross-package dependencies. Together, this gave us more cache hits, more parallelism, and fewer redundant rebuilds.</li>
+            <li><strong>Build only what changed.</strong> We leaned into our <a href="https://turborepo.dev/" target="_blank" rel="noopener">Turborepo</a> monorepo setup with affected-based builds, so CI only touches the packages that a change actually impacts rather than rebuilding everything. We also compiled packages so their outputs could be cached and reused, and paired that with TypeScript <a href="https://www.typescriptlang.org/tsconfig/#isolatedDeclarations" target="_blank" rel="noopener">isolated declarations</a> so type info is emitted per package without cross-package dependencies. Together, this gave us more cache hits, more parallelism, and fewer redundant rebuilds.</li>
             <li><strong>Trade JavaScript tooling for Rust and Go.</strong> The single biggest lever was replacing our JS-based toolchain with native equivalents. Nearly every tool got roughly an order of magnitude faster.
               <details class="toolchain">
                 <summary>See the full toolchain</summary>
@@ -565,13 +564,9 @@
       <section class="chapter" id="ch-develop">
         <h2 class="title">How we develop now</h2>
         <p>Improving our developer experience, or <span class="tip" data-tip="The tools, environments, processes, and workflows that shape how easily engineers can go from idea to shipped code.">DevEx</span>, changed how people code in expected and unexpected ways. DevEx is the whole path an engineer travels from idea to shipped: the tools, the environments, and every step in between. The obvious: Agents write a lot of code now. More surprising: Where that code gets written.</p>
-        <div class="diagram" data-diagram="dev-scene">
-          <div class="dlabel">Work moves to the cloud &mdash; agents join engineers</div>
-          <canvas class="devscene" aria-label="Work moves off an engineer's laptop into cloud CI, where AI agents appear working alongside engineers"></canvas>
-        </div>
         <div class="block">
           <h3>Agent-generated code</h3>
-          <p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor, Codex, and Claude Code agents. Nearly all frontend code and most backend code is now agent-generated.</p>
+          <p>Like most orgs, our engineers shifted from writing code by hand to steering <a href="https://cursor.com/" target="_blank" rel="noopener">Cursor</a>, <a href="https://openai.com/codex/" target="_blank" rel="noopener">Codex</a>, and <a href="https://claude.com/product/claude-code" target="_blank" rel="noopener">Claude Code</a> agents. Nearly all frontend code and most backend code is now agent-generated.</p>
         </div>
         <div class="block">
           <h3>CI as our new dev environment</h3>
@@ -590,11 +585,11 @@
         </div>
         <div class="block">
           <h3>Frontend previews</h3>
-          <p>For a frontend change, we can add a label to the PR, and GitHub Actions builds the assets, pushes them to S3, and our frontend server loads them as a working copy of the app. It comes with dev tools to flip feature flags and settings, and a deep verification link that takes you straight to the page your change affects. The preview is ready in 30 seconds to 5 minutes, and checking a change takes 2 to 5 minutes of click-through with no local setup needed.</p>
+          <p>For a frontend change, we can add a label to the PR, and <a href="https://github.com/features/actions" target="_blank" rel="noopener">GitHub Actions</a> builds the assets, pushes them to S3, and our frontend server loads them as a working copy of the app. It comes with dev tools to flip feature flags and settings, and a deep verification link that takes you straight to the page your change affects. The preview is ready in 30 seconds to 5 minutes, and checking a change takes 2 to 5 minutes of click-through with no local setup needed.</p>
         </div>
         <div class="block">
           <h3>Backend ephemerals</h3>
-          <p>Backend changes get validated through ephemerals. Add a label to a PR, and GitHub Actions spins up a throwaway copy of the full stack in the cloud with Argo. An engineer or an agent can then hit the APIs or run the feature end-to-end before it merges. It&rsquo;s 2&ndash;3x faster than it used to be.</p>
+          <p>Backend changes get validated through ephemerals. Add a label to a PR, and <a href="https://github.com/features/actions" target="_blank" rel="noopener">GitHub Actions</a> spins up a throwaway copy of the full stack in the cloud with <a href="https://argoproj.github.io/" target="_blank" rel="noopener">Argo</a>. An engineer or an agent can then hit the APIs or run the feature end-to-end before it merges. It&rsquo;s 2&ndash;3x faster than it used to be.</p>
         </div>
       </section>
 
@@ -609,7 +604,7 @@
         <div class="block">
           <h3>Automated code review</h3>
           <div class="metrics"><div class="stat"><div class="lab">Bug reports &middot; &darr; 55%</div><div class="big">715 <span class="arr">&rarr;</span> <span class="to">319</span></div></div></div>
-          <p>We use Cursor&rsquo;s Bugbot on every PR in CI. It comes out of the box, and we add context when it misses things. So far, it catches bugs that most humans used to let through. Even though we&rsquo;ve tripled the PRs we ship, bug reports have fallen by more than half (from 715 a month to 319), and high-priority issue reports have also dropped. More code hasn&rsquo;t meant worse code, and Bugbot is a large reason why.</p>
+          <p>We use Cursor&rsquo;s <a href="https://cursor.com/bugbot" target="_blank" rel="noopener">Bugbot</a> on every PR in CI. It comes out of the box, and we add context when it misses things. So far, it catches bugs that most humans used to let through. Even though we&rsquo;ve tripled the PRs we ship, bug reports have fallen by more than half (from 715 a month to 319), and high-priority issue reports have also dropped. More code hasn&rsquo;t meant worse code, and Bugbot is a large reason why.</p>
         </div>
         <div class="block">
           <h3>Risk-based auto-approval</h3>
@@ -629,7 +624,7 @@
         <div class="pull"><q>AI progression is largely not a technical issue. It&rsquo;s a cultural one.</q><span class="cite">&mdash; Wade Chambers, Chief Engineering Officer, Amplitude</span></div>
         <div class="block">
           <h3>Start with the leaders</h3>
-          <p>Leader ambition can be one of the biggest drags on organizational velocity. You can&rsquo;t ask engineers to hand their work to an agent if their own leaders won&rsquo;t. So we made them go first, literally. Amplitude&rsquo;s chief engineering officer asked senior leaders to vibe code in front of the entire EPD org. Leaders experienced the highs and lows of agentic building (and breaking) live on stage. They then took that live-coding exercise back to their own teams to repeat it. This made it feel like leaders were co-developing with their teams, rather than simply talking at them.</p>
+          <p>Leader ambition can be one of the biggest drags on organizational velocity. You can&rsquo;t ask engineers to hand their work to an agent if their own leaders won&rsquo;t. So we made them go first, literally. Amplitude&rsquo;s chief engineering officer asked senior leaders to vibe code in front of the entire EPD org. Leaders experienced the highs and lows of agentic building (and breaking) <a href="https://amplitude.com/blog/ai-week-recap" target="_blank" rel="noopener">live on stage</a>. They then took that live-coding exercise back to their own teams to repeat it. This made it feel like leaders were co-developing with their teams, rather than simply talking at them.</p>
         </div>
         <div class="block">
           <h3>Let anyone ship</h3>
@@ -1273,84 +1268,6 @@ document.querySelectorAll("canvas.flowviz").forEach((cv) => {
   const io = new IntersectionObserver((es) => {
     es.forEach((e) => (e.isIntersecting ? viz.start() : viz.stop()));
   }, { threshold: 0.15 });
-  io.observe(cv);
-});
-
-// ── "How we develop now" scene ──────────────────────────────────────────────
-// Work leaves the laptop, streams into cloud CI, and agents fade in working
-// alongside engineers. Plays on scroll-in (800ms in, agents at ~1s).
-function makeDevScene(canvas) {
-  const ctx = canvas.getContext("2d");
-  let W = 0, H = 0, dpr = 1, parts = [], lastT = 0, spawnAcc = 0, running = false, appearT = 0;
-  const C = {
-    line: "rgba(138,143,152,0.55)", faint: "rgba(138,143,152,0.22)",
-    human: "#8a8f98", agent: "#6d7be8", cloudFill: "rgba(94,106,210,0.06)",
-    label: "#8a8f98", work: ["#6d7be8", "#4a90d9", "#3fb64f", "#d1a24a"],
-  };
-  function resize() {
-    dpr = Math.min(2, window.devicePixelRatio || 1);
-    const r = canvas.getBoundingClientRect(); W = r.width; H = r.height;
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  new ResizeObserver(resize).observe(canvas); resize();
-  const lap = () => ({ x: W * 0.13, y: H * 0.46 });
-  const cloud = () => ({ x0: W * 0.44, x1: W * 0.9, cy: H * 0.46, h: Math.min(92, H * 0.6) });
-  const HUMANS = [[0.22, -0.16], [0.5, 0.2], [0.72, -0.06]];
-  const AGENTS = [[0.36, 0.2], [0.6, -0.22], [0.82, 0.12]];
-  function spawn() { const l = lap(); parts.push({ x: l.x + 20, y: l.y - 3 + (Math.random() * 8 - 4), col: C.work[(Math.random() * C.work.length) | 0], v: 0.85 + Math.random() * 0.5, r: 1.8 + Math.random() * 1.0 }); }
-  function tick(now) {
-    if (!appearT) appearT = now;
-    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0; lastT = now;
-    const cl = cloud(), mid = cl.x0 + (cl.x1 - cl.x0) * 0.45;
-    spawnAcc += dt;
-    while (spawnAcc > 0.17 && parts.length < 36) { spawnAcc -= 0.17; spawn(); }
-    for (const p of parts) p.x += (W * 0.3) * p.v * dt;
-    parts = parts.filter((p) => p.x < mid + 4);
-    draw(now);
-  }
-  function step(now) { tick(now); if (running) requestAnimationFrame(step); }
-  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-  function draw(now) {
-    ctx.clearRect(0, 0, W, H);
-    const l = lap(), cl = cloud(), mid = cl.x0 + (cl.x1 - cl.x0) * 0.45;
-    ctx.strokeStyle = C.faint; ctx.lineWidth = 1; ctx.setLineDash([2, 5]);
-    ctx.beginPath(); ctx.moveTo(l.x + 20, l.y); ctx.lineTo(cl.x0 + 4, cl.cy); ctx.stroke(); ctx.setLineDash([]);
-    // laptop (line art)
-    ctx.strokeStyle = C.line; ctx.lineWidth = 1.4; ctx.lineJoin = "round";
-    rr(l.x - 20, l.y - 16, 36, 22, 3); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(l.x - 26, l.y + 10); ctx.lineTo(l.x + 22, l.y + 10); ctx.lineTo(l.x + 16, l.y + 6); ctx.lineTo(l.x - 20, l.y + 6); ctx.closePath(); ctx.stroke();
-    // cloud region + label
-    ctx.fillStyle = C.cloudFill; ctx.strokeStyle = C.faint; ctx.lineWidth = 1;
-    rr(cl.x0, cl.cy - cl.h / 2, cl.x1 - cl.x0, cl.h, Math.min(26, cl.h / 2)); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = C.label; ctx.globalAlpha = 0.7; ctx.font = '600 10px ui-monospace, SFMono-Regular, monospace'; ctx.textAlign = "center"; ctx.letterSpacing = "0.14em";
-    ctx.fillText("CI · CLOUD", (cl.x0 + cl.x1) / 2, cl.cy - cl.h / 2 - 9); ctx.letterSpacing = "0px"; ctx.globalAlpha = 1;
-    // work packets, fading as they enter the cloud
-    for (const p of parts) { const f = Math.max(0, Math.min(1, 1 - (p.x - cl.x0) / ((mid - cl.x0) || 1))); ctx.globalAlpha = 0.9 * f; ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill(); }
-    ctx.globalAlpha = 1;
-    // engineers (outline) present; agents (filled + ring) fade in
-    const aA = Math.max(0, Math.min(1, (now - appearT - 1000) / 1000));
-    const w = cl.x1 - cl.x0, hh = cl.h * 0.66;
-    ctx.lineWidth = 1.4;
-    for (const [fx, fy] of HUMANS) { const x = cl.x0 + w * fx, y = cl.cy + hh * fy; ctx.strokeStyle = C.human; ctx.beginPath(); ctx.arc(x, y, 3.4, 0, 6.2832); ctx.stroke(); }
-    if (aA > 0) for (const [fx, fy] of AGENTS) { const x = cl.x0 + w * fx, y = cl.cy + hh * fy; ctx.globalAlpha = aA; ctx.fillStyle = C.agent; ctx.beginPath(); ctx.arc(x, y, 3.4, 0, 6.2832); ctx.fill(); ctx.globalAlpha = aA * 0.4; ctx.strokeStyle = C.agent; ctx.beginPath(); ctx.arc(x, y, 6.2, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1; }
-    // legend (bottom, centered)
-    ctx.font = '10px ui-monospace, SFMono-Regular, monospace'; ctx.textAlign = "left"; ctx.globalAlpha = 0.85;
-    const items = [["s", C.human, "engineers"], ["f", C.agent, "agents"]];
-    let tot = 0; items.forEach((it) => (tot += 8 + ctx.measureText(it[2]).width + 20));
-    let sx = (W - tot) / 2; const ly = H - 8;
-    for (const [kind, col, txt] of items) {
-      if (kind === "f") { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx, ly - 3, 3.2, 0, 6.2832); ctx.fill(); }
-      else { ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(sx, ly - 3, 3.2, 0, 6.2832); ctx.stroke(); }
-      ctx.fillStyle = C.label; ctx.fillText(txt, sx + 8, ly); sx += 8 + ctx.measureText(txt).width + 20;
-    }
-    ctx.globalAlpha = 1;
-  }
-  return { start() { if (!running) { running = true; lastT = 0; appearT = 0; requestAnimationFrame(step); } }, stop() { running = false; }, tick };
-}
-document.querySelectorAll("canvas.devscene").forEach((cv) => {
-  const viz = makeDevScene(cv);
-  const io = new IntersectionObserver((es) => es.forEach((e) => (e.isIntersecting ? viz.start() : viz.stop())), { threshold: 0.15 });
   io.observe(cv);
 });
 </script>

@@ -353,16 +353,6 @@
   /* ch-foundations sub-sections render as elevated cards */
   #ch-foundations .block { margin: 28px 0; padding: 30px 34px; background: var(--surface-1); border: 0.5px solid var(--hairline); border-radius: 16px; }
   #ch-foundations .block > *:last-child { margin-bottom: 0; }
-  /* foundation "aura" — a soft full-bleed underlay so this reads as the layer
-     beneath the whole pipeline, not a single step in it */
-  #ch-foundations { position: relative; }
-  #ch-foundations::before {
-    content: ""; position: absolute; z-index: -1; pointer-events: none;
-    left: 50%; transform: translateX(-50%); width: 100vw; top: 0; bottom: 0;
-    background:
-      radial-gradient(70% 44% at 50% 3%, rgba(94, 106, 210, 0.20), transparent 68%),
-      linear-gradient(180deg, rgba(94, 106, 210, 0.08), rgba(94, 106, 210, 0.025) 45%, transparent 88%);
-  }
 
   /* diagram frame — neutral surface (particle motif is rebuilt in P3) */
   .diagram { margin: 40px 0; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); padding: 24px; }

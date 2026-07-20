@@ -368,6 +368,7 @@
   .diagram { margin: 40px 0; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); background: var(--surface-1); padding: 24px; }
   .diagram .dlabel { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-subtle); margin-bottom: 16px; }
   .flowviz { display: block; width: 100%; height: 164px; }
+  .devscene { display: block; width: 100%; height: 150px; }
   .plegend { font-size: 13px; color: var(--ink-subtle); margin-top: 16px; line-height: 1.6; }
 
   .stage {
@@ -574,7 +575,10 @@
       <section class="chapter" id="ch-develop">
         <h2 class="title">How we develop now</h2>
         <p>Improving our developer experience, or <span class="tip" data-tip="The tools, environments, processes, and workflows that shape how easily engineers can go from idea to shipped code.">DevEx</span>, changed how people code in expected and unexpected ways. DevEx is the whole path an engineer travels from idea to shipped: the tools, the environments, and every step in between. The obvious: Agents write a lot of code now. More surprising: Where that code gets written.</p>
-        <!-- [design] animation: "work" leaves a laptop and moves into the CI/cloud stretch of the pipeline; agents then appear working there alongside humans -->
+        <div class="diagram" data-diagram="dev-scene">
+          <div class="dlabel">Work moves to the cloud &mdash; agents join engineers</div>
+          <canvas class="devscene" aria-label="Work moves off an engineer's laptop into cloud CI, where AI agents appear working alongside engineers"></canvas>
+        </div>
         <div class="block">
           <h3>Agent-generated code</h3>
           <p>Like most orgs, our engineers shifted from writing code by hand to steering Cursor, Codex, and Claude Code agents. Nearly all frontend code and most backend code is now agent-generated.</p>
@@ -1279,6 +1283,84 @@ document.querySelectorAll("canvas.flowviz").forEach((cv) => {
   const io = new IntersectionObserver((es) => {
     es.forEach((e) => (e.isIntersecting ? viz.start() : viz.stop()));
   }, { threshold: 0.15 });
+  io.observe(cv);
+});
+
+// ── "How we develop now" scene ──────────────────────────────────────────────
+// Work leaves the laptop, streams into cloud CI, and agents fade in working
+// alongside engineers. Plays on scroll-in (800ms in, agents at ~1s).
+function makeDevScene(canvas) {
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0, dpr = 1, parts = [], lastT = 0, spawnAcc = 0, running = false, appearT = 0;
+  const C = {
+    line: "rgba(138,143,152,0.55)", faint: "rgba(138,143,152,0.22)",
+    human: "#8a8f98", agent: "#6d7be8", cloudFill: "rgba(94,106,210,0.06)",
+    label: "#8a8f98", work: ["#6d7be8", "#4a90d9", "#3fb64f", "#d1a24a"],
+  };
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = canvas.getBoundingClientRect(); W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(resize).observe(canvas); resize();
+  const lap = () => ({ x: W * 0.13, y: H * 0.46 });
+  const cloud = () => ({ x0: W * 0.44, x1: W * 0.9, cy: H * 0.46, h: Math.min(92, H * 0.6) });
+  const HUMANS = [[0.22, -0.16], [0.5, 0.2], [0.72, -0.06]];
+  const AGENTS = [[0.36, 0.2], [0.6, -0.22], [0.82, 0.12]];
+  function spawn() { const l = lap(); parts.push({ x: l.x + 20, y: l.y - 3 + (Math.random() * 8 - 4), col: C.work[(Math.random() * C.work.length) | 0], v: 0.85 + Math.random() * 0.5, r: 1.8 + Math.random() * 1.0 }); }
+  function tick(now) {
+    if (!appearT) appearT = now;
+    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0; lastT = now;
+    const cl = cloud(), mid = cl.x0 + (cl.x1 - cl.x0) * 0.45;
+    spawnAcc += dt;
+    while (spawnAcc > 0.17 && parts.length < 36) { spawnAcc -= 0.17; spawn(); }
+    for (const p of parts) p.x += (W * 0.3) * p.v * dt;
+    parts = parts.filter((p) => p.x < mid + 4);
+    draw(now);
+  }
+  function step(now) { tick(now); if (running) requestAnimationFrame(step); }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    const l = lap(), cl = cloud(), mid = cl.x0 + (cl.x1 - cl.x0) * 0.45;
+    ctx.strokeStyle = C.faint; ctx.lineWidth = 1; ctx.setLineDash([2, 5]);
+    ctx.beginPath(); ctx.moveTo(l.x + 20, l.y); ctx.lineTo(cl.x0 + 4, cl.cy); ctx.stroke(); ctx.setLineDash([]);
+    // laptop (line art)
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1.4; ctx.lineJoin = "round";
+    rr(l.x - 20, l.y - 16, 36, 22, 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(l.x - 26, l.y + 10); ctx.lineTo(l.x + 22, l.y + 10); ctx.lineTo(l.x + 16, l.y + 6); ctx.lineTo(l.x - 20, l.y + 6); ctx.closePath(); ctx.stroke();
+    // cloud region + label
+    ctx.fillStyle = C.cloudFill; ctx.strokeStyle = C.faint; ctx.lineWidth = 1;
+    rr(cl.x0, cl.cy - cl.h / 2, cl.x1 - cl.x0, cl.h, Math.min(26, cl.h / 2)); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.label; ctx.globalAlpha = 0.7; ctx.font = '600 10px ui-monospace, SFMono-Regular, monospace'; ctx.textAlign = "center"; ctx.letterSpacing = "0.14em";
+    ctx.fillText("CI · CLOUD", (cl.x0 + cl.x1) / 2, cl.cy - cl.h / 2 - 9); ctx.letterSpacing = "0px"; ctx.globalAlpha = 1;
+    // work packets, fading as they enter the cloud
+    for (const p of parts) { const f = Math.max(0, Math.min(1, 1 - (p.x - cl.x0) / ((mid - cl.x0) || 1))); ctx.globalAlpha = 0.9 * f; ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    // engineers (outline) present; agents (filled + ring) fade in
+    const aA = Math.max(0, Math.min(1, (now - appearT - 1000) / 1000));
+    const w = cl.x1 - cl.x0, hh = cl.h * 0.66;
+    ctx.lineWidth = 1.4;
+    for (const [fx, fy] of HUMANS) { const x = cl.x0 + w * fx, y = cl.cy + hh * fy; ctx.strokeStyle = C.human; ctx.beginPath(); ctx.arc(x, y, 3.4, 0, 6.2832); ctx.stroke(); }
+    if (aA > 0) for (const [fx, fy] of AGENTS) { const x = cl.x0 + w * fx, y = cl.cy + hh * fy; ctx.globalAlpha = aA; ctx.fillStyle = C.agent; ctx.beginPath(); ctx.arc(x, y, 3.4, 0, 6.2832); ctx.fill(); ctx.globalAlpha = aA * 0.4; ctx.strokeStyle = C.agent; ctx.beginPath(); ctx.arc(x, y, 6.2, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1; }
+    // legend (bottom, centered)
+    ctx.font = '10px ui-monospace, SFMono-Regular, monospace'; ctx.textAlign = "left"; ctx.globalAlpha = 0.85;
+    const items = [["s", C.human, "engineers"], ["f", C.agent, "agents"]];
+    let tot = 0; items.forEach((it) => (tot += 8 + ctx.measureText(it[2]).width + 20));
+    let sx = (W - tot) / 2; const ly = H - 8;
+    for (const [kind, col, txt] of items) {
+      if (kind === "f") { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx, ly - 3, 3.2, 0, 6.2832); ctx.fill(); }
+      else { ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(sx, ly - 3, 3.2, 0, 6.2832); ctx.stroke(); }
+      ctx.fillStyle = C.label; ctx.fillText(txt, sx + 8, ly); sx += 8 + ctx.measureText(txt).width + 20;
+    }
+    ctx.globalAlpha = 1;
+  }
+  return { start() { if (!running) { running = true; lastT = 0; appearT = 0; requestAnimationFrame(step); } }, stop() { running = false; }, tick };
+}
+document.querySelectorAll("canvas.devscene").forEach((cv) => {
+  const viz = makeDevScene(cv);
+  const io = new IntersectionObserver((es) => es.forEach((e) => (e.isIntersecting ? viz.start() : viz.stop())), { threshold: 0.15 });
   io.observe(cv);
 });
 </script>

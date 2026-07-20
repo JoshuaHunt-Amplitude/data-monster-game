@@ -88,9 +88,15 @@
   .l-title canvas.speedrunning { width: min(86vw, 1000px); }
   .l-title canvas.software { width: min(60vw, 700px); margin-top: 1vw; }
   .l-by { position: relative; z-index: 2; margin-top: 30px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-subtle); }
-  /* speedrun category tag — the "(any%)" from the title */
-  .l-cat { position: relative; z-index: 2; margin-top: 18px; display: inline-block; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-subtle); border: 0.5px solid var(--hairline-strong); border-radius: 999px; padding: 4px 13px; }
-  #landing.us-active .l-cat { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
+  /* "(any%)" speedrun category, set beside SOFTWARE; fades in 800ms after load */
+  .l-swwrap { position: relative; width: fit-content; margin: 0 auto; }
+  .l-any {
+    position: absolute; left: 100%; bottom: 10%; margin-left: clamp(8px, 1vw, 18px);
+    font-family: var(--font-mono); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em;
+    white-space: nowrap; line-height: 1; color: #3b82f6; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+    font-size: clamp(16px, 2.4vw, 34px); opacity: 0; animation: anyIn 0.6s ease 0.8s forwards;
+  }
+  @keyframes anyIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .l-choices { position: relative; z-index: 2; margin-top: 40px; display: inline-flex; border: 0.5px solid var(--hairline-strong); border-radius: var(--radius-button); overflow: hidden; }
   .l-choices button {
     font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em;
@@ -347,6 +353,7 @@
   .metrics .big { font-size: 30px; font-variation-settings: "wght" 600; color: var(--ink); letter-spacing: -0.02em; line-height: 1.15; }
   .metrics .big .arr { color: var(--ink-subtle); font-variation-settings: "wght" 400; margin: 0 2px; }
   .metrics .big .to { background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: #9BE0F4; }
+  .metrics.metric-lead .big { font-size: clamp(52px, 7vw, 84px); line-height: 1.02; letter-spacing: -0.03em; }
 
   /* sub-sections — flow in the column like a blog; no sidebar (that's for pull quotes only) */
   .block { margin: 40px 0; }
@@ -414,9 +421,11 @@
   <div class="l-frame"></div>
   <div class="l-title">
     <canvas class="speedrunning" data-pixel="SPEEDRUNNING" data-shape="circle"></canvas>
-    <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
+    <div class="l-swwrap">
+      <canvas class="software" data-pixel="SOFTWARE" data-shape="triangle"></canvas>
+      <span class="l-any" aria-hidden="true">(any%)</span>
+    </div>
   </div>
-  <div class="l-cat">any%</div>
   <div class="l-by">How we 3&times;&rsquo;d PRs in 6 months, and how you can too</div>
   <div class="l-choices">
     <button data-mode="game" class="primary"><span class="ic">&#9654;</span> Read &amp; play game</button>
@@ -629,7 +638,7 @@
         </div>
         <div class="block">
           <h3>Let anyone ship</h3>
-          <div class="metrics"><div class="stat"><div class="lab">Non-engineer PRs</div><div class="big"><span class="to">~5%</span></div></div></div>
+          <div class="metrics metric-lead"><div class="stat"><div class="lab">Non-engineer PRs</div><div class="big"><span class="to">~5%</span></div></div></div>
           <p>The biggest positive was handing over the keys to the kingdom and letting non-engineers ship code. Designers, PMs, and even marketers use Claude and Cursor to ship anything from bug fixes to product improvements. Non-engineers make up about 5% of our PRs, but they&rsquo;re high-value changes, and that number continues to grow.</p>
           <p>The best part is that these changes happen much faster because there&rsquo;s no more handoff to eng. And the fixes are often better because the person closest to the problem makes the fix. Jingshu Zhao, one of our principal designers, started with a small PR to address a button alignment issue. Soon after, she used Claude Code to reorganize our navigation and sunset sections with low usage. It was a change the broader team wanted to make but was never able to prioritize, so she did it herself.</p>
           <p>Jingshu&rsquo;s changes go beyond the UI. While testing our agent-creation templates, she noticed the agents were guessing instead of asking, like picking a funnel name on their own instead of asking which one the user meant. She used Claude Code to trace it across both the template and tool definitions, and shipped consistent fixes across every template.</p>

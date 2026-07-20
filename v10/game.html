@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amplitude EPD × AI — Data Monster World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Geist+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --amp-blue: #1e61f0;
+    --amp-light: #6d9bff;
+    --card-bg: rgba(13, 12, 40, 0.9);
+    --text: #eef0ff;
+    --font-main: "Inter", system-ui, -apple-system, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #1c0f45;
+    font-family: var(--font-main);
+    color: var(--text);
+  }
+
+  #game {
+    position: fixed;
+    inset: 0;
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  #world {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    will-change: transform;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .content-card {
+    position: absolute;
+    width: 380px;
+    padding: 22px 24px;
+    background: var(--card-bg);
+    border: 3px solid var(--amp-light);
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px #0b0524, 6px 6px 0 rgba(0,0,0,0.45);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: auto;
+  }
+
+  .content-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .content-card .kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amp-light);
+    margin-bottom: 8px;
+  }
+
+  .content-card h2 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin-bottom: 10px;
+  }
+
+  .content-card p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(238, 240, 255, 0.92);
+  }
+
+  .content-card .stat {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 700;
+    color: #ffd447;
+    margin: 6px 0 6px;
+  }
+
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    z-index: 3;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-shadow: 0 1px 3px rgba(11, 5, 36, 0.9);
+    pointer-events: none;
+  }
+  #hud-score { color: #ffd447; font-size: 15px; letter-spacing: 1px; }
+  #hud-best { color: rgba(238,240,255,0.55); font-size: 11px; margin-left: 10px; letter-spacing: 1.5px; }
+
+  #level-nav {
+    position: fixed;
+    top: 44px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 3;
+    font-family: inherit;
+  }
+
+  #level-nav .nav-label {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--amp-light);
+    text-shadow: 0 1px 3px rgba(11, 5, 36, 0.9);
+    margin-right: 2px;
+  }
+
+  #level-nav button {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 5px 8px;
+    color: var(--text);
+    background: rgba(16, 8, 48, 0.75);
+    border: 2px solid var(--amp-light);
+    border-radius: 3px;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+  }
+
+  #level-nav button:hover {
+    background: var(--amp-blue);
+    border-color: #fff;
+  }
+
+  #level-nav button:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+  }
+
+  /* progress states: where you are, where you've been */
+  #level-nav button.visited {
+    background: rgba(109, 155, 255, 0.3);
+  }
+
+  #level-nav button.current {
+    background: var(--amp-blue);
+    border-color: #fff;
+  }
+
+  #minimap {
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 34px;
+    z-index: 3;
+    cursor: pointer;
+  }
+
+  @media (pointer: coarse) {
+    #minimap { bottom: 104px; }
+  }
+
+  /* Geist Pixel — reuse the hero's dot-matrix typography (ELSH: 20 Circle, 60 Triangle) */
+  @font-face {
+    font-family: "Geist Pixel";
+    src: url("../assets/geist-pixel.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+  }
+
+  /* ===== Retro title screen ===== */
+  #title-card {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    text-align: center;
+    background: #05060c;
+    overflow: hidden;
+    cursor: pointer;
+    transition: opacity 0.6s ease;
+  }
+  /* animated warp starfield */
+  #title-card #starfield {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 1; pointer-events: none;
+  }
+  #title-card.hidden { opacity: 0; pointer-events: none; }
+
+  #title-card .tc-logo { position: relative; z-index: 2; line-height: 0.92; }
+  #title-card .tc-line {
+    display: block;
+    font-family: "Geist Pixel", monospace;
+    font-weight: 400;
+    color: #7a84ff;
+    letter-spacing: 0.02em;
+    font-size: clamp(46px, 9vw, 104px);
+    /* blocky 3D extrude, NES-logo style */
+    text-shadow: 3px 3px 0 #2b3196, 6px 6px 0 #1a1e5a;
+  }
+  #title-card .tc-line.tri    { font-variation-settings: "ELSH" 60; }
+  #title-card .tc-line.circle { font-variation-settings: "ELSH" 20; }
+  #title-card .tc-tag {
+    position: relative; z-index: 2; margin-top: 20px;
+    font-family: var(--font-mono); font-size: clamp(11px, 1.6vw, 15px);
+    letter-spacing: 0.55em; text-indent: 0.55em; text-transform: uppercase;
+    color: #c2c8ff;
+  }
+  #title-card .tc-start {
+    position: relative; z-index: 2; margin-top: 44px;
+    font-family: var(--font-mono); font-size: clamp(12px, 1.6vw, 15px);
+    letter-spacing: 0.28em; text-transform: uppercase; color: #eef0ff;
+  }
+  #title-card .tc-copy {
+    position: absolute; z-index: 2; bottom: 30px; left: 0; right: 0;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.24em; text-transform: uppercase; color: rgba(200,206,255,0.6);
+  }
+
+  /* in-game controls hint — appears after start, hides once you move */
+  #controls-hint {
+    position: fixed; left: 0; right: 0; bottom: 6.5%;
+    text-align: center; z-index: 5;
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    line-height: 2.1; letter-spacing: 0.5px;
+    color: rgba(238, 240, 255, 0.95);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  #controls-hint.show { opacity: 1; }
+
+  /* click-to-jump affordance — a label that sticks beside the cursor while the
+     mouse is over the game (position set in JS via transform). */
+  #tap-hint {
+    position: fixed; left: 0; top: 0;
+    z-index: 7; pointer-events: none; white-space: nowrap;
+    padding: 8px 14px;
+    font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; color: #ffffff;
+    background: rgba(10, 10, 16, 0.9);
+    border-radius: 6px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    opacity: 0; transition: opacity 0.18s ease;
+  }
+  #tap-hint.show { opacity: 1; }
+
+  /* completion banner — fades in when the monster crosses the finish flag */
+  #complete {
+    position: fixed; left: 50%; top: 38%;
+    transform: translate(-50%, -50%) scale(0.9);
+    text-align: center; z-index: 5;
+    padding: 26px 44px;
+    background: rgba(13, 12, 40, 0.86);
+    border: 3px solid #ffd447;
+    border-radius: 8px;
+    box-shadow: 0 0 0 3px #0b0524, 0 0 44px rgba(255, 212, 71, 0.35);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  #complete.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #complete .c-kicker {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase; color: #ffd447; margin-bottom: 6px;
+  }
+  #complete .c-title { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 12px; }
+  #complete .c-time { font-family: var(--font-mono); font-size: 40px; font-weight: 700; letter-spacing: 1px; color: #fff; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  #complete .c-time b { color: #fff; }
+  #complete .c-best {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px;
+    color: rgba(238, 240, 255, 0.6); margin-top: 4px;
+  }
+  #complete .c-score { font-family: var(--font-mono); font-size: 14px; letter-spacing: 1.5px; margin-top: 14px; color: rgba(238,240,255,0.85); }
+  #complete .c-score b { color: #ffd447; }
+  #complete #c-again {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 1px;
+    margin-top: 20px; pointer-events: auto; cursor: pointer;
+    background: #ffd447; color: #0b0524; border: 0; border-radius: 6px; padding: 10px 24px;
+    font-family: var(--font-mono);
+    transition: transform 0.06s ease, filter 0.15s ease;
+  }
+  #complete #c-again .ca-main { font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  #complete #c-again .ca-sub { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(11,5,36,0.65); }
+  #complete #c-again:hover { filter: brightness(1.08); }
+  #complete #c-again:active { transform: translateY(1px); }
+
+  #touch-controls { display: none; }
+  @media (pointer: coarse) {
+    #touch-controls {
+      display: flex;
+      position: fixed;
+      bottom: 18px;
+      left: 0; right: 0;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 22px;
+      z-index: 5;
+    }
+    #touch-controls .pad { display: flex; gap: 14px; }
+    #touch-controls button {
+      width: 70px; height: 70px;
+      font-size: 28px;
+      background: rgba(16,8,48,0.7);
+      color: var(--text);
+      border: 3px solid var(--amp-light);
+      border-radius: 8px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<div id="world"></div>
+
+<div id="hud">
+  <span id="hud-score">★ 0<small id="hud-best"></small></span>
+</div>
+
+<nav id="level-nav">
+  <span class="nav-label">SKIP TO</span>
+  <button data-zone="0">IDEA</button>
+  <button data-zone="1">CODE</button>
+  <button data-zone="2">VALIDATION</button>
+  <button data-zone="3">REVIEW</button>
+  <button data-zone="4">PRODUCTION</button>
+  <button id="btn-nom" title="data nom nom (E)">🍪</button>
+</nav>
+
+<canvas id="minimap" width="600" height="68" title="Click to jump to a level"></canvas>
+<div id="minimap-hint">click to teleport</div>
+
+<style>
+  /* --- v3 embed tweaks --- */
+  .content-card { display: none !important; }   /* the story lives in the article on the left */
+  #minimap-hint {
+    position: fixed; bottom: 20px; right: calc(50% + 158px);
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--amp-light);
+    text-shadow: 0 1px 3px rgba(11,5,36,0.9); white-space: nowrap; z-index: 3; pointer-events: none;
+  }
+  @media (pointer: coarse) { #minimap-hint { display: none; } }
+  /* scrollytelling: the article + parent nav drive everything, so hide the
+     manual controls, in-game level nav and minimap teleport UI */
+  body.scrolly #controls-hint,
+  body.scrolly #level-nav,
+  body.scrolly #minimap,
+  body.scrolly #minimap-hint { display: none !important; }
+  /* ...but when fullscreen "play with arrows" is on, show the controls overlay */
+  body.scrolly.keys-on #controls-hint { display: block !important; }
+</style>
+
+<div id="title-card">
+  <canvas id="starfield"></canvas>
+  <div class="tc-logo">
+    <span class="tc-line tri">SOFTWARE</span>
+    <span class="tc-line circle">SPEEDRUN</span>
+  </div>
+  <div class="tc-tag">The Game</div>
+  <div class="tc-start">Click or press any key to play</div>
+  <div class="tc-copy">© 2026 Amplitude</div>
+</div>
+<div id="controls-hint">→ / ← WALK &nbsp;·&nbsp; DOUBLE-TAP → RUN &nbsp;·&nbsp; ↑ JUMP<br>↑↑ DOUBLE JUMP &nbsp;·&nbsp; ↓ DUCK &nbsp;·&nbsp; E = 🍪 DATA NOM</div>
+
+<div id="tap-hint">Click to jump</div>
+
+<div id="complete">
+  <div class="c-kicker">Level complete</div>
+  <div class="c-title">🏁 World 1 cleared</div>
+  <div class="c-time"><b id="c-time-val">0.000</b></div>
+  <div class="c-best">BEST TIME <span id="c-best-time">—</span></div>
+  <div class="c-score">SCORE <b id="c-score-val">0</b> &nbsp;·&nbsp; BEST <span id="c-best-val">0</span></div>
+  <button id="c-again">
+    <span class="ca-main">↻ Play again</span>
+    <span class="ca-sub">try to beat your score</span>
+  </button>
+</div>
+
+<div id="touch-controls">
+  <div class="pad">
+    <button id="btn-left">◀</button>
+    <button id="btn-right">▶</button>
+  </div>
+  <div class="pad">
+    <button id="btn-down">▼</button>
+    <button id="btn-jump">▲</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SPRITES — sliced from the Data Monster sheet by
+   tools/slice_sprites.py. Horizontal strips, facing right.
+   ============================================================ */
+const SPRITES = {
+  idle: { src: "../assets/datamonster-idle.png", frames: 3, frameWidth: 125, frameHeight: 167, fps: 2.5 },
+  walk: { src: "../assets/datamonster-walk.png", frames: 4, frameWidth: 131, frameHeight: 159, fps: 8 },
+  run:  { src: "../assets/datamonster-run.png",  frames: 10, frameWidth: 199, frameHeight: 292, fps: 16 },
+  fly:  { src: "../assets/datamonster-fly.png",  frames: 4, frameWidth: 224, frameHeight: 152, fps: 10 },
+  eat:  { src: "../assets/datamonster-eat.png",  frames: 10, frameWidth: 191, frameHeight: 237, fps: 9 },
+};
+
+/* ============================================================
+   TUNING
+   ============================================================ */
+const ZONE_LEN = 3600;
+const WORLD_LENGTH = ZONE_LEN * 5;        // 18000
+const START_X = 300;                       // where the monster spawns
+const FLAG_X = WORLD_LENGTH - 450;         // finish line (17550) — 100% here
+const WALK_SPEED = 560;
+const RUN_SPEED = 1320;
+const DOUBLE_TAP_MS = 260;                // window for double-tap → run
+const JUMP_VELOCITY = 980;
+const GRAVITY = 2700;
+const PLAYER_H = 150;                     // on-screen monster height
+const GROUND_FRAC = 0.82;
+const COIN_VALUE = 10;
+const GEM_VALUE = 100;
+const MANUAL_HOLD_MS = 500;               // how long manual input stays "the driver" in the embed
+
+const ZONES = [
+  { name: "IDEA",       skyTop: "#141024", skyBot: "#0a0820" },
+  { name: "CODE",       skyTop: "#0d1f38", skyBot: "#000922" },
+  { name: "VALIDATION", skyTop: "#183028", skyBot: "#071521" },
+  { name: "REVIEW",     skyTop: "#12241f", skyBot: "#030b17" },
+  { name: "PRODUCTION", skyTop: "#145eaf", skyBot: "#41a6db" },
+];
+
+/* Painted level plates (art by Joshua's generator, sliced by tools/slice_*.py).
+   bg = everything above the walkable grass line, drawn as a parallax backdrop.
+   ground = repeating wall strip drawn at parallax 1 under the player's feet.
+   fill = color continuing the wall below the strip on tall windows. */
+// Plates are LAZY-loaded — only the zone(s) on screen (+ the next one) are fetched,
+// so the page doesn't download all ~7MB of backgrounds up front. ensurePlate(zi)
+// kicks off the load the first time a zone comes into view / is teleported to.
+const PLATES = {
+  0: { bgSrc: "../assets/idea2-bg.png",       groundSrc: "../assets/idea2-ground.png",       fill: "#00031b", bg: null, ground: null },
+  1: { bgSrc: "../assets/code2-bg.png",       groundSrc: "../assets/code2-ground.png",       fill: "#000112", bg: null, ground: null },
+  2: { bgSrc: "../assets/validation2-bg.png", groundSrc: "../assets/validation2-ground.png", fill: "#00001a", bg: null, ground: null },
+  3: { bgSrc: "../assets/review2-bg.png",     groundSrc: "../assets/review2-ground.png",     fill: "#000018", bg: null, ground: null },
+  4: { bgSrc: "../assets/production2-bg.png", groundSrc: "../assets/production2-ground.png", fill: "#00132e", bg: null, ground: null },
+};
+function loadImg(src) { const i = new Image(); i.src = src; return i; }
+function ensurePlate(zi) { const p = PLATES[zi]; if (p && !p.bg) { p.bg = loadImg(p.bgSrc); p.ground = loadImg(p.groundSrc); } }
+function plateReady(p) { return p && p.bg && p.bg.complete && p.bg.naturalWidth > 0 && p.ground && p.ground.complete && p.ground.naturalWidth > 0; }
+
+/* SPEED BOOST gate straddling each zone boundary. Drawn in two halves so the
+   monster passes IN FRONT of the near (left) half and BEHIND the far (right)
+   post — the illusion of running through the gate. split = the x-fraction of
+   the source image where "behind the monster" begins (just left of the right
+   post); openCx = where the archway opening is centered. */
+const gateImg = loadImg("../assets/speed-boost-gate.png");
+const GATE = { W: 1187, H: 777, screenH: 330, openCx: 0.455, split: 0.64, sink: 6 };
+function gateReady() { return gateImg.complete && gateImg.naturalWidth > 0; }
+
+/* animated lightning "zap" shown in the middle of each speed-boost gate opening */
+const zapImg = loadImg("../assets/zap-speed-boost.png");
+const ZAP = { frames: 4, fps: 12, screenH: 90 };   // screenH = on-screen height (40% smaller than the original 150)
+function zapReady() { return zapImg.complete && zapImg.naturalWidth > 0; }
+
+/* ============================================================
+   COLLECTIBLES — coins (small) + diamonds (big). Art is optional:
+   drop transparent PNGs at assets/coin.png / assets/diamond.png (or
+   spin strips) and set `frames`; until then they're drawn procedurally.
+   Positions are laid out per zone as ground runs, jump arcs, and one
+   high diamond that needs a jump — gate boundaries are left clear.
+   `gy` = height (px) of the item's CENTER above the ground line.
+   ============================================================ */
+const coinImg = loadImg("../assets/coin.png");
+const gemImg  = loadImg("../assets/diamond.png");
+// frames = cells in the source strip (for slicing); still = show only the first
+// frame (no cycling) — the multi-frame spin read poorly at this size, so we keep
+// a single clean frame and let the bob in drawCoins give it life.
+const COIN = { img: coinImg, frames: 4, still: true, size: 46 };
+const GEM  = { img: gemImg,  frames: 4, still: true, size: 60 };
+function nearGate(x) { for (let k = 1; k < ZONES.length; k++) if (Math.abs(x - k * ZONE_LEN) < 240) return true; return false; }
+const COINS = (() => {
+  const out = [];
+  const GROUND_GY = 92;                 // walk-height coins
+  for (let zi = 0; zi < 5; zi++) {
+    const base = zi * ZONE_LEN;
+    // a run of ground coins across the zone
+    for (let i = 0; i < 7; i++) {
+      const x = base + 520 + i * 360;
+      if (x >= FLAG_X || nearGate(x)) continue;
+      out.push({ x, gy: GROUND_GY, type: "coin" });
+    }
+    // a jump arc mid-zone
+    const ax = base + 1720;
+    for (let i = 0; i < 5; i++) {
+      const t = i / 4;
+      out.push({ x: ax + i * 95, gy: GROUND_GY + Math.sin(t * Math.PI) * 190, type: "coin" });
+    }
+    // one diamond per zone, up high (rewards a jump)
+    const gx = base + 2680;
+    if (gx < FLAG_X && !nearGate(gx)) out.push({ x: gx, gy: 236, type: "gem" });
+  }
+  return out;
+})();
+
+let score = 0;
+let hiScore = +(localStorage.getItem("dm-hiscore") || 0) || 0;
+function bumpHiScore() { if (score > hiScore) { hiScore = score; try { localStorage.setItem("dm-hiscore", hiScore); } catch (e) {} } }
+
+/* Speedrun timer — the run is timed from the first movement to crossing the flag,
+   to the millisecond. Best time persists so replays chase a personal best. */
+let runStart = 0;   // performance.now() when the run began; 0 = not started
+let runMs = 0;      // elapsed ms (frozen at the finish)
+let bestMs = +(localStorage.getItem("dm-besttime") || 0) || 0;
+function fmtTime(ms) {
+  const s = ms / 1000;
+  if (s >= 60) { const m = Math.floor(s / 60); return m + ":" + (s - m * 60).toFixed(3).padStart(6, "0"); }
+  return s.toFixed(3);
+}
+function bumpBestTime() { if (bestMs === 0 || runMs < bestMs) { bestMs = Math.round(runMs); try { localStorage.setItem("dm-besttime", bestMs); } catch (e) {} } }
+
+/* ============================================================
+   LEVEL CONTENT — two editorial cards per zone
+   ============================================================ */
+const LEVEL_CONTENT = [
+  { x: 700,   kicker: "Level 1 · The Office", title: "EPD meets AI",
+    body: "Amplitude's Engineering, Product & Design org set out on a quest: weave AI into how we build — not as a gimmick, but as a daily power-up." },
+  { x: 2100,  kicker: "Power-Up · Code", title: "More PRs, less grind", stat: "🍄 +XX%",
+    body: "AI-assisted coding is helping engineers ship more pull requests, with reviews and boilerplate handled in a fraction of the time." },
+  { x: 4500,  kicker: "Level 2 · Lombard Street", title: "From idea to spec, faster", stat: "⭐ XX hrs saved",
+    body: "The crookedest street in the world has nothing on a product spec. PMs draft, synthesize research, and pressure-test ideas with AI." },
+  { x: 6100,  kicker: "Power-Up · Product", title: "Fewer switchbacks to ship",
+    body: "Less time navigating hairpin turns between docs and meetings — more time with customers." },
+  { x: 8300,  kicker: "Level 3 · Golden Gate", title: "Prototypes at warp speed", stat: "🔥 X× faster",
+    body: "Designers bridge concept to clickable prototype in hours, not weeks, freeing time for the craft that actually matters." },
+  { x: 9800,  kicker: "Power-Up · Design", title: "Spanning the gap",
+    body: "Design and engineering meet in the middle — AI-generated prototypes become production code without the handoff toll booth." },
+  { x: 11800, kicker: "Level 4 · Painted Ladies", title: "AI is a team sport",
+    body: "Skills, agents, and shared workflows spread across the org — every win one Ampliteer ships becomes a power-up for everyone else." },
+  { x: 13300, kicker: "Power-Up · Culture", title: "Compounding wins",
+    body: "Every workflow shared, every skill published, every agent shipped makes the next team faster. The wins stack like coins." },
+  { x: 15000, kicker: "Level 5 · AI Engineering Deck", title: "Agents on the night shift",
+    body: "Planner, coder, reviewer, tester, deployer — all ONLINE. Orchestrated agents keep the pipeline moving while the city sleeps." },
+  { x: 16100, kicker: "Power-Up · Stack", title: "Claude + Cursor, wired in",
+    body: "The deck runs on Claude and Cursor: prompt routing, an MCP network, and a deployment pipeline that goes build → test → review → deploy." },
+  { x: 17100, kicker: "Level Complete", title: "🏁 This is just World 1",
+    body: "The Data Monster keeps running. More levels — more stories, more stats, more wins — coming soon." },
+];
+
+/* ============================================================
+   SPRITE LOADING (procedural placeholder fallback kept)
+   ============================================================ */
+function makePlaceholderSheet(frames) {
+  const F = 32;
+  const c = document.createElement("canvas");
+  c.width = F * frames; c.height = F;
+  const x = c.getContext("2d");
+  for (let f = 0; f < frames; f++) {
+    x.fillStyle = "#2f6bff";
+    x.fillRect(f * F + 6, 8, 20, 18);
+  }
+  return c;
+}
+function loadAnim(cfg) {
+  const anim = { frames: cfg.frames, fps: cfg.fps, fw: cfg.frameWidth, fh: cfg.frameHeight, img: null, ready: false };
+  const img = new Image();
+  img.src = cfg.src;
+  img.onload = () => { anim.img = img; anim.ready = true; };
+  img.onerror = () => {
+    anim.fw = 32; anim.fh = 32;
+    anim.img = makePlaceholderSheet(anim.frames);
+    anim.ready = true;
+  };
+  return anim;
+}
+const anims = {
+  idle: loadAnim(SPRITES.idle),
+  walk: loadAnim(SPRITES.walk),
+  run:  loadAnim(SPRITES.run),
+  fly:  loadAnim(SPRITES.fly),
+  eat:  loadAnim(SPRITES.eat),
+};
+
+/* ============================================================
+   SETUP
+   ============================================================ */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const worldEl = document.getElementById("world");
+const titleCard = document.getElementById("title-card");
+const controlsHint = document.getElementById("controls-hint");
+
+/* ============================================================
+   TITLE SCREEN — simple scattered starfield with a gentle twinkle
+   and barely-there drift (just enough to feel alive). Runs only
+   while the title is up; stopped once the game starts.
+   ============================================================ */
+const starCanvas = document.getElementById("starfield");
+const sctx = starCanvas.getContext("2d");
+const STAR_COLORS = ["#ffffff", "#ffffff", "#ffffff", "#cdd6ff", "#9aa7ff", "#ff9a9a"];
+let starW = 0, starH = 0, stars = [], starRAF = null, starLast = 0;
+function resizeStars() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  starW = window.innerWidth; starH = window.innerHeight;
+  starCanvas.width = Math.round(starW * dpr);
+  starCanvas.height = Math.round(starH * dpr);
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function spawnStar() {
+  return {
+    x: Math.random() * starW,
+    y: Math.random() * starH,
+    r: Math.random() < 0.14 ? 2 : 1,          // mostly 1px pixels, a few 2px
+    base: 0.22 + Math.random() * 0.34,        // dim resting brightness
+    amp: 0.08 + Math.random() * 0.2,          // twinkle depth
+    phase: Math.random() * Math.PI * 2,
+    tw: 0.25 + Math.random() * 0.55,          // twinkle speed (slow)
+    vy: 1.2 + Math.random() * 1.6,            // px/sec — barely-there downward drift
+    col: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
+  };
+}
+function stepStars(now) {
+  const dt = starLast ? Math.min(0.05, (now - starLast) / 1000) : 0;
+  starLast = now;
+  const t = now / 1000;
+  sctx.clearRect(0, 0, starW, starH);
+  for (const s of stars) {
+    s.y += s.vy * dt;
+    if (s.y > starH + 2) { s.y = -2; s.x = Math.random() * starW; }   // wrap
+    const a = s.base + Math.sin(t * s.tw + s.phase) * s.amp;
+    sctx.globalAlpha = a < 0 ? 0 : a > 0.8 ? 0.8 : a;
+    sctx.fillStyle = s.col;
+    sctx.fillRect(Math.round(s.x), Math.round(s.y), s.r, s.r);
+  }
+  sctx.globalAlpha = 1;
+  starRAF = requestAnimationFrame(stepStars);
+}
+function startStars() {
+  if (starRAF) return;
+  resizeStars();
+  const N = Math.round(Math.min(150, starW * starH / 9000));
+  stars = Array.from({ length: N }, () => spawnStar());
+  starLast = 0;
+  starRAF = requestAnimationFrame(stepStars);
+}
+function stopStars() { if (starRAF) { cancelAnimationFrame(starRAF); starRAF = null; } }
+window.addEventListener("resize", () => { if (starRAF) resizeStars(); });
+startStars();
+const hudScore = document.getElementById("hud-score");
+const hudBest = document.getElementById("hud-best");
+const completeEl = document.getElementById("complete");
+function updateScoreHud() {
+  hudScore.innerHTML = "★ " + score + (hiScore > 0 ? `<small id="hud-best">BEST ${hiScore}</small>` : "");
+}
+updateScoreHud();
+
+let W = 0, H = 0, groundY = 0;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  groundY = Math.round(H * GROUND_FRAC);
+  ctx.imageSmoothingEnabled = false;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// Content cards
+const cards = LEVEL_CONTENT.map(item => {
+  const el = document.createElement("div");
+  el.className = "content-card";
+  el.style.left = item.x + "px";
+  el.innerHTML =
+    `<div class="kicker">${item.kicker}</div>` +
+    `<h2>${item.title}</h2>` +
+    (item.stat ? `<div class="stat">${item.stat}</div>` : "") +
+    `<p>${item.body}</p>`;
+  worldEl.appendChild(el);
+  return { el, x: item.x, shown: false };
+});
+function layoutCards() {
+  cards.forEach(c => { c.el.style.top = Math.max(40, groundY - 440) + "px"; });
+}
+layoutCards();
+window.addEventListener("resize", layoutCards);
+
+/* The card whose section the player is in sticks to the LEFT of the screen
+   (CARD_MARGIN from the edge), out of the Data Monster's path so it never
+   hides him — including mid-jump. Its travel is still clamped so it parks
+   at its own zone's boundary — or just short of where the next card appears —
+   instead of riding along into the new section. */
+const CARD_W = 380;
+const CARD_MARGIN = 90;
+const CARD_GAP = 20;
+function updateCards(camX) {
+  if (!started) return; // no card until the first step — keeps the title screen clean
+  let active = -1;
+  for (let i = 0; i < cards.length; i++) {
+    if (player.x >= cards[i].x - W * 0.45) active = i;
+  }
+  if (active < 0) return;
+  const c = cards[active];
+  if (!c.shown) { c.shown = true; c.el.classList.add("visible"); }
+  const nextX = active + 1 < cards.length ? cards[active + 1].x : Infinity;
+  // The next card activates when player.x = nextX - 0.45W, at which point the
+  // camera sits at camX = player.x - 0.4W = nextX - 0.85W, so the next card
+  // appears at world-left (nextX - 0.85W) + CARD_MARGIN. Park this card a full
+  // width + CARD_GAP to the left of that so the two never overlap on handoff.
+  const nextCardLeft = (nextX - 0.85 * W) + CARD_MARGIN;
+  const zoneEnd = (zoneIndexAt(c.x) + 1) * ZONE_LEN;
+  const parkAt = Math.min(nextCardLeft - CARD_W - CARD_GAP, zoneEnd - CARD_W - 48);
+  c.el.style.left = Math.round(Math.min(camX + CARD_MARGIN, parkAt)) + "px";
+}
+
+/* ============================================================
+   INPUT — double-tap to run, up to jump, down to duck
+   ============================================================ */
+const keys = { left: false, right: false, down: false };
+let runLatch = { left: false, right: false };
+let lastTap = { left: -1e9, right: -1e9 };
+let wantJump = false;
+let started = false;
+let runMult = 1;              // ×1.2 the first time the monster runs through each gate (capped)
+const RUN_MULT_MAX = 5;
+const boostedGates = new Set();   // gates already boosted — walking back through won't stack
+let hasMoved = false;             // controls hint stays up until the monster first moves
+
+// leave the retro title screen → reveal the game + show the controls hint
+function startGame() {
+  if (started) return;
+  started = true;
+  titleCard.classList.add("hidden");
+  stopStars();
+  if (!hasMoved) controlsHint.classList.add("show");
+}
+// hide the controls hint once the monster actually moves
+function endControls() {
+  hasMoved = true;
+  controlsHint.classList.remove("show");
+}
+
+/* ── Scrollytelling mode ─────────────────────────────────────────────────
+   When embedded in the article, the parent drives the monster by scroll:
+   no title screen, no manual controls — player.x eases toward a target the
+   parent posts on scroll. Toggled + fed via postMessage. */
+let scrolly = false;
+let scrollTargetX = 300;    // world x the monster is easing toward
+let scrollyRunning = false; // true when far from target → run animation
+let keysEnabled = false;    // in the embed, arrow keys are OFF by default (scroll +
+                            // click-to-jump + teleport only). A future "Play with
+                            // ←↑↓→" button flips this via an enableKeys message.
+// Bidirectional sync: in the embed, manual input takes ownership for a beat and
+// the game drives the article; otherwise the article's scroll drives the game.
+let lastManual = -1e9;      // performance.now() of the last manual input
+let lastPostedX = -1;       // dedupe the worldX we post up to the parent
+function manualDriving() { return performance.now() - lastManual < MANUAL_HOLD_MS; }
+function noteManual() { lastManual = performance.now(); }
+function postWorldX() {
+  if (Math.abs(player.x - lastPostedX) < 0.5) return;
+  lastPostedX = player.x;
+  try { parent.postMessage({ type: "worldX", worldX: player.x }, "*"); } catch (e) {}
+}
+function setScrolly(on) {
+  scrolly = on;
+  document.body.classList.toggle("scrolly", on);
+  if (on) { startGame(); endControls(); }   // reveal the game, drop the hint
+}
+window.addEventListener("message", e => {
+  const d = e.data || {};
+  if (d.type === "scrollytelling") setScrolly(!!d.on);
+  // while the player is driving, ignore the article's scroll target (no snap-back)
+  else if (d.type === "progress" && typeof d.worldX === "number" && !manualDriving()) scrollTargetX = d.worldX;
+  // level pill clicked in the parent → warp the monster there with a poof
+  else if (d.type === "teleport" && typeof d.worldX === "number") teleportToX(d.worldX);
+  // cookie button / E key in the parent → data nom nom
+  else if (d.type === "eat") startEat();
+  // W key in the parent → jump (mirrors click-to-jump in the embed)
+  else if (d.type === "jump") { if (started && !teleport && eating <= 0) wantJump = true; }
+  // fullscreen play → start a fresh run from the beginning
+  else if (d.type === "restart") resetRun();
+  // fullscreen "play with arrows" — enable keyboard control + show the controls
+  // overlay (it fades on first move); disabling hides it again.
+  else if (d.type === "enableKeys") {
+    keysEnabled = !!d.on;
+    document.body.classList.toggle("keys-on", keysEnabled);
+    if (keysEnabled) { hasMoved = false; controlsHint.classList.add("show"); }
+    else controlsHint.classList.remove("show");
+  }
+});
+// tell the parent we're ready so it can (re)send the mode + first target
+try { parent.postMessage({ type: "game-ready" }, "*"); } catch (e) {}
+
+function pressDir(dir) {
+  if (!started) { startGame(); return; }   // first input just starts the game
+  noteManual();
+  const now = performance.now();
+  if (now - lastTap[dir] < DOUBLE_TAP_MS) runLatch[dir] = true;
+  lastTap[dir] = now;
+  keys[dir] = true;
+}
+function releaseDir(dir) {
+  keys[dir] = false;
+  runLatch[dir] = false;
+}
+
+window.addEventListener("keydown", e => {
+  if (e.repeat) {
+    if (["ArrowRight","ArrowLeft","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
+    return;
+  }
+  if (!started) {   // first key press just leaves the title screen
+    if (["ArrowRight","ArrowLeft","ArrowUp","ArrowDown"," ","w","a","s","d","e","c"].includes(e.key)) {
+      startGame(); e.preventDefault(); return;
+    }
+  }
+  if (scrolly && !keysEnabled) return;   // embed: keys off by default → scroll + click + teleport only
+  if (e.key === "ArrowRight" || e.key === "d") { pressDir("right"); e.preventDefault(); }
+  if (e.key === "ArrowLeft"  || e.key === "a") { pressDir("left");  e.preventDefault(); }
+  if (e.key === "ArrowUp" || e.key === "w" || e.key === " ") { wantJump = true; noteManual(); e.preventDefault(); }
+  if (e.key === "ArrowDown" || e.key === "s") { keys.down = true; noteManual(); e.preventDefault(); }
+  if (e.key === "e" || e.key === "c") startEat();
+});
+window.addEventListener("keyup", e => {
+  if (e.key === "ArrowRight" || e.key === "d") releaseDir("right");
+  if (e.key === "ArrowLeft"  || e.key === "a") releaseDir("left");
+  if (e.key === "ArrowDown" || e.key === "s") keys.down = false;
+});
+
+// click / tap anywhere on the title screen to start
+window.addEventListener("pointerdown", () => { if (!scrolly && !started) startGame(); });
+
+// click on the GAME = jump (double-click = double jump via the jump counter).
+// Fires only on the canvas, so nav/minimap buttons still do their own thing.
+canvas.addEventListener("pointerdown", () => {
+  if (!started || teleport || eating > 0) return;
+  wantJump = true;
+});
+
+// "click to jump" affordance: a label stuck beside the cursor while the mouse is
+// over the game. It follows the pointer, then fades after 3s of hovering so it
+// doesn't nag; re-arms once the pointer leaves and returns.
+const tapHint = document.getElementById("tap-hint");
+let tapHintTimer = 0, tapHintDone = false;
+canvas.addEventListener("mousemove", e => {
+  if (!started || tapHintDone) return;
+  tapHint.style.transform = `translate(${e.clientX + 18}px, ${e.clientY + 6}px)`;
+  if (!tapHint.classList.contains("show")) {   // first move this hover → show + start the 3s countdown
+    tapHint.classList.add("show");
+    clearTimeout(tapHintTimer);
+    tapHintTimer = setTimeout(() => { tapHint.classList.remove("show"); tapHintDone = true; }, 3000);
+  }
+});
+canvas.addEventListener("mouseleave", () => {
+  tapHint.classList.remove("show");
+  clearTimeout(tapHintTimer);
+  tapHintDone = false;   // re-arm for the next hover
+});
+
+// Touch controls (double-tap works here too via pressDir)
+function bindHold(id, onDown, onUp) {
+  const b = document.getElementById(id);
+  b.addEventListener("pointerdown", e => { onDown(); e.preventDefault(); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => b.addEventListener(ev, onUp));
+}
+bindHold("btn-left",  () => pressDir("left"),  () => releaseDir("left"));
+bindHold("btn-right", () => pressDir("right"), () => releaseDir("right"));
+bindHold("btn-jump",  () => { wantJump = true; noteManual(); }, () => {});
+bindHold("btn-down",  () => { keys.down = true; noteManual(); }, () => { keys.down = false; });
+
+/* ============================================================
+   TELEPORT — level-skip with a *poof* sparkle burst on both ends
+   ============================================================ */
+let teleport = null;          // { targetX, until }
+const sparks = [];
+
+function spawnPoof(worldX, feetY) {
+  const cy = feetY - PLAYER_H * 0.5;
+  const cols = ["#ffffff", "#ffd447", "#6d9bff", "#b7c6ff"];
+  for (let i = 0; i < 30; i++) {
+    const ang = (i / 30) * Math.PI * 2 + Math.random() * 0.4;
+    const speed = 90 + Math.random() * 260;
+    sparks.push({
+      x: worldX + (Math.random() - 0.5) * 40,
+      y: cy + (Math.random() - 0.5) * 90,
+      vx: Math.cos(ang) * speed,
+      vy: Math.sin(ang) * speed - 40,
+      life: 0.45 + Math.random() * 0.35,
+      maxLife: 0.8,
+      size: 3 + Math.random() * 7,
+      col: cols[i % cols.length],
+    });
+  }
+}
+
+function startTeleport(zi) {
+  const targetX = zi === 0 ? 300 : zi * ZONE_LEN + 420;
+  teleportToX(targetX);
+}
+// Warp the monster to a world-x with a poof on both ends. Used by the standalone
+// level-nav and by the parent's level pills (via a teleport postMessage).
+function teleportToX(x) {
+  if (teleport) return;
+  x = Math.max(120, Math.min(WORLD_LENGTH - 120, x));
+  if (Math.abs(x - player.x) < 10) return;
+  if (!started) { started = true; titleCard.classList.add("hidden"); stopStars(); }
+  endControls();
+  spawnPoof(player.x, groundY);
+  scrollTargetX = x;                              // keep the scroll target in sync so it doesn't ease away
+  teleport = { targetX: x, until: performance.now() + 380 };
+}
+
+function updateSparks(dt, camX) {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.life -= dt;
+    if (s.life <= 0) { sparks.splice(i, 1); continue; }
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.vx *= 0.92;
+    s.vy *= 0.92;
+    const sx = s.x - camX;
+    if (sx < -40 || sx > W + 40) continue;
+    const a = Math.max(0, s.life / s.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = s.col;
+    const r = s.size * (0.5 + a);
+    // diamond sparkle
+    ctx.beginPath();
+    ctx.moveTo(sx, s.y - r);
+    ctx.lineTo(sx + r * 0.6, s.y);
+    ctx.lineTo(sx, s.y + r);
+    ctx.lineTo(sx - r * 0.6, s.y);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+document.querySelectorAll("#level-nav button[data-zone]").forEach(b => {
+  b.addEventListener("click", () => startTeleport(+b.dataset.zone));
+});
+
+/* ============================================================
+   DATA NOM — cookie out from under the hat (E key or 🍪 button)
+   ============================================================ */
+let eating = 0;
+function startEat() {
+  if (teleport || eating > 0 || player.y > 0) return;
+  startGame();
+  eating = SPRITES.eat.frames / SPRITES.eat.fps + 0.5; // hold the last bite a beat
+  player.animTime = 0;
+}
+document.getElementById("btn-nom").addEventListener("click", startEat);
+
+/* ============================================================
+   LEVEL PROGRESS — nav button states + minimap strip
+   ============================================================ */
+let maxX = 300; // furthest point reached
+const navButtons = [...document.querySelectorAll("#level-nav button[data-zone]")];
+const minimap = document.getElementById("minimap");
+const mctx = minimap.getContext("2d");
+const MM_W = 300, MM_H = 34;
+const MM_COLORS = ["#6a7194", "#4d9e57", "#c94430", "#d9a0b8", "#3336a8"];
+
+minimap.addEventListener("click", e => {
+  const rect = minimap.getBoundingClientRect();
+  const frac = (e.clientX - rect.left) / rect.width;
+  startTeleport(Math.max(0, Math.min(ZONES.length - 1, Math.floor(frac * ZONES.length))));
+});
+
+function drawMinimap() {
+  mctx.setTransform(2, 0, 0, 2, 0, 0);
+  mctx.clearRect(0, 0, MM_W, MM_H);
+  const x0 = 2, y0 = 10, w = MM_W - 4, h = 15;
+
+  mctx.save();
+  mctx.beginPath();
+  mctx.roundRect(x0, y0, w, h, 6);
+  mctx.clip();
+  // one themed segment per level
+  for (let i = 0; i < ZONES.length; i++) {
+    mctx.fillStyle = MM_COLORS[i];
+    mctx.fillRect(x0 + (i / ZONES.length) * w, y0, w / ZONES.length + 1, h);
+  }
+  // where you've been (bright) vs not yet (dim)
+  const fracMax = Math.min(1, maxX / WORLD_LENGTH);
+  mctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+  mctx.fillRect(x0, y0, w * fracMax, h);
+  mctx.fillStyle = "rgba(5, 3, 20, 0.45)";
+  mctx.fillRect(x0 + w * fracMax, y0, w * (1 - fracMax), h);
+  // boundaries + level numbers
+  mctx.fillStyle = "rgba(11, 5, 36, 0.6)";
+  for (let i = 1; i < ZONES.length; i++) mctx.fillRect(x0 + (i / ZONES.length) * w - 1, y0, 2, h);
+  mctx.font = "600 7px 'Geist Mono', monospace";
+  mctx.textAlign = "center";
+  mctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+  for (let i = 0; i < ZONES.length; i++) {
+    mctx.fillText(ZONES[i].name, x0 + ((i + 0.5) / ZONES.length) * w, y0 + h - 4);
+  }
+  mctx.restore();
+
+  // strip border
+  mctx.strokeStyle = "rgba(238, 240, 255, 0.85)";
+  mctx.lineWidth = 1.5;
+  mctx.beginPath();
+  mctx.roundRect(x0, y0, w, h, 6);
+  mctx.stroke();
+  // finish flag
+  mctx.font = "10px sans-serif";
+  mctx.fillText("🏁", x0 + w - 6, y0 - 3);
+  // you are here
+  const px = x0 + Math.min(1, player.x / WORLD_LENGTH) * w;
+  mctx.beginPath();
+  mctx.arc(px, y0 + h / 2, 5, 0, Math.PI * 2);
+  mctx.fillStyle = "#ffffff";
+  mctx.fill();
+  mctx.strokeStyle = "#0b0524";
+  mctx.lineWidth = 2;
+  mctx.stroke();
+  mctx.textAlign = "left";
+}
+
+function updateLevelUI() {
+  const cur = zoneIndexAt(player.x);
+  navButtons.forEach((b, i) => {
+    b.classList.toggle("current", i === cur);
+    b.classList.toggle("visited", i !== cur && maxX >= i * ZONE_LEN + 400);
+  });
+  drawMinimap();
+}
+
+function drawNomBubble(cx, topY) {
+  const text = "data nom nom";
+  ctx.font = "600 14px Inter, sans-serif";
+  const tw = ctx.measureText(text).width;
+  const bw = tw + 26, bh = 32;
+  const bx = cx - bw / 2, by = topY - bh - 18;
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#1e61f0";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 9);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx - 7, by + bh);
+  ctx.lineTo(cx + 9, by + bh);
+  ctx.lineTo(cx + 2, by + bh + 11);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#141838";
+  ctx.textAlign = "center";
+  ctx.fillText(text, cx, by + 21);
+  ctx.textAlign = "left";
+}
+
+/* ============================================================
+   PLAYER
+   ============================================================ */
+const player = {
+  x: 300,
+  y: 0,          // height above ground (positive = in the air)
+  vy: 0,
+  facing: 1,
+  state: "idle", // idle | walk | run | jump | duck | eat
+  animTime: 0,
+};
+let jumps = 0;   // jumps used since last grounded (max 2 = double jump)
+let finished = false;      // true once the monster crosses the finish flag
+let flagLitAt = 0;         // timestamp the flag lit up (for the glow ramp)
+function showComplete() {
+  document.getElementById("c-time-val").textContent = fmtTime(runMs);
+  document.getElementById("c-best-time").textContent = fmtTime(bestMs || runMs);
+  document.getElementById("c-score-val").textContent = score;
+  document.getElementById("c-best-val").textContent = hiScore;
+  completeEl.classList.add("show");   // stays up (has a Play again button); resetRun() dismisses it
+}
+
+// Fresh playthrough — reset position, score, timer, coins, gates, flag (keeps
+// the persisted high score + best time). Used when entering fullscreen play.
+function resetRun() {
+  player.x = START_X; player.y = 0; player.vy = 0; player.facing = 1; jumps = 0;
+  scrollTargetX = START_X; teleport = null; eating = 0;
+  score = 0; runStart = 0; runMs = 0; finished = false; flagLitAt = 0;
+  runMult = 1; boostedGates.clear(); maxX = START_X;
+  for (const c of COINS) c.got = false;
+  updateScoreHud();
+  completeEl.classList.remove("show");
+}
+// "Play again" on the completion card → fresh run from the start
+document.getElementById("c-again").addEventListener("click", resetRun);
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function rand(seed) { const s = Math.sin(seed * 127.1) * 43758.5453; return s - Math.floor(s); }
+function hexLerp(a, b, t) {
+  const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
+  return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(",")})`;
+}
+function zoneIndexAt(x) { return Math.max(0, Math.min(ZONES.length - 1, Math.floor(x / ZONE_LEN))); }
+// Blended zone palette near boundaries (600px blend band)
+function skyAt(x) {
+  const zi = zoneIndexAt(x);
+  const posInZone = x - zi * ZONE_LEN;
+  const BAND = 600;
+  if (zi < ZONES.length - 1 && posInZone > ZONE_LEN - BAND) {
+    const t = (posInZone - (ZONE_LEN - BAND)) / BAND;
+    return {
+      top: hexLerp(ZONES[zi].skyTop, ZONES[zi + 1].skyTop, t),
+      bot: hexLerp(ZONES[zi].skyBot, ZONES[zi + 1].skyBot, t),
+    };
+  }
+  return { top: ZONES[zi].skyTop, bot: ZONES[zi].skyBot };
+}
+function px(x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+// Parallax element anchored to its zone: appears at screen x = rel when the
+// camera sits at the zone's left edge, then scrolls at speed p. Keep rel
+// under ~ZONE_LEN * p so elements finish exiting before the zone ends.
+function parX(base, rel, p, camX) { return rel - (camX - base) * p; }
+// Alpha for far background bands: fade in/out at zone boundaries based on
+// how much of the viewport the zone covers.
+function zoneAlpha(base, camX) {
+  const ov = Math.min(camX + W, base + ZONE_LEN) - Math.max(camX, base);
+  return Math.max(0, Math.min(1, (ov / W) * 1.6));
+}
+// Repeating far-background band scrolling at parallax p; draws tile(sx) for
+// every tile of width period covering the viewport.
+function tiled(p, period, camX, tile) {
+  let sx = ((-camX * p) % period + period) % period;
+  for (sx -= period; sx < W + period; sx += period) tile(sx);
+}
+
+/* ============================================================
+   ZONE 2: LOMBARD STREET (3600 .. 7200)
+   ============================================================ */
+/* Painted plate backdrop: scaled so the plate's grass line sits exactly at
+   groundY, given a parallax speed that makes it traverse the viewport over
+   the length of the zone. Mirrored copies on both sides cover the zone
+   transition bands so the plate never shows a hard edge. */
+function drawPlateZone(base, plate, camX) {
+  if (!plateReady(plate)) return;
+  const iw = plate.bg.naturalWidth, ih = plate.bg.naturalHeight;
+  const s = groundY / ih;
+  const PW = iw * s;
+  const p = Math.max(0.15, Math.min(0.9, (PW - W) / ZONE_LEN));
+  const x0 = parX(base, 0, p, camX);
+  for (let k = -1; k <= 1; k++) {
+    const mx = x0 + k * PW;
+    if (mx > W || mx + PW < 0) continue;
+    if (k === 0) {
+      ctx.drawImage(plate.bg, mx, 0, PW, groundY);
+    } else {
+      ctx.save();
+      ctx.translate(mx + PW / 2, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(plate.bg, -PW / 2, 0, PW, groundY);
+      ctx.restore();
+    }
+  }
+}
+
+/* ============================================================
+   SHARED SCENERY
+   ============================================================ */
+const clouds = Array.from({ length: 30 }, (_, i) => ({ x: ZONE_LEN + i * 480 + rand(i + 5) * 400, y: 40 + rand(i + 11) * 200, s: 0.7 + rand(i + 17) * 1.1 }));
+
+function drawGroundSegment(sxStart, sxEnd, zi, camX) {
+  const plate = PLATES[zi];
+  if (plate && plateReady(plate)) {
+    // painted ground strip from the level plate, world-locked (parallax 1)
+    const s = groundY / plate.bg.naturalHeight;
+    const tw = plate.ground.naturalWidth * s, th = plate.ground.naturalHeight * s;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sxStart, groundY, sxEnd - sxStart, H - groundY);
+    ctx.clip();
+    px(sxStart, groundY, sxEnd - sxStart, H - groundY, plate.fill);
+    const k0 = Math.floor((camX + sxStart) / tw), k1 = Math.ceil((camX + sxEnd) / tw);
+    for (let k = k0; k <= k1; k++) {
+      ctx.drawImage(plate.ground, k * tw - camX, groundY, tw + 1, th);
+    }
+    ctx.restore();
+    return;
+  }
+  // plate not loaded yet: plain dark fill (no procedural floor) so nothing old
+  // flashes before the painted ground strip loads in
+  px(sxStart, groundY, sxEnd - sxStart, H - groundY, (plate && plate.fill) || "#05060c");
+}
+
+function drawScene(camX, time) {
+  // sky (blended by camera position)
+  const sky = skyAt(camX + W / 2);
+  const g = ctx.createLinearGradient(0, 0, 0, groundY);
+  g.addColorStop(0, sky.top);
+  g.addColorStop(1, sky.bot);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, groundY);
+
+  // clouds (outdoor zones only)
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  for (const cl of clouds) {
+    const sx = cl.x - camX * 0.25;
+    if (sx < -200 || sx > W + 200) continue;
+    if (cl.x < ZONE_LEN - 200) continue;
+    const s = cl.s;
+    ctx.fillRect(sx, cl.y, 90 * s, 18 * s);
+    ctx.fillRect(sx + 18 * s, cl.y - 12 * s, 54 * s, 14 * s);
+  }
+
+  // zone scenery, each clipped to its own strip so scenes never bleed
+  // across a boundary (full painted plates make bleed very visible)
+  const zLeft = zoneIndexAt(camX), zRight = zoneIndexAt(camX + W);
+  for (let zi = zLeft; zi <= zRight + 1; zi++) ensurePlate(zi);   // load visible zones + prefetch the next
+  for (let zi = zLeft; zi <= zRight; zi++) {
+    const sx0 = zi * ZONE_LEN - camX, sx1 = (zi + 1) * ZONE_LEN - camX;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sx0, 0, sx1 - sx0, H);
+    ctx.clip();
+    // painted plate when ready; otherwise leave the sky gradient (clean loading
+    // state) — no procedural stand-in, so no old-art flash before the plate loads
+    if (plateReady(PLATES[zi])) drawPlateZone(zi * ZONE_LEN, PLATES[zi], camX);
+    ctx.restore();
+  }
+
+  // ground, segmented per zone
+  for (let zi = zLeft; zi <= zRight; zi++) {
+    const sxStart = Math.max(0, zi * ZONE_LEN - camX);
+    const sxEnd = Math.min(W, (zi + 1) * ZONE_LEN - camX);
+    if (sxEnd > sxStart) drawGroundSegment(sxStart, sxEnd, zi, camX);
+  }
+
+  // pipeline gates at each zone boundary — back (near) halves, drawn behind the
+  // monster. The seam mask + right half are drawn in drawGatesFront() (over him).
+  drawGates(camX, "back");
+
+  // goal flag
+  drawGoalFlag(camX, time);
+}
+
+// Draw the SPEED BOOST gates at every zone boundary. part="back" draws a seam
+// mask + the left half (behind the monster); part="front" draws the right post
+// (over the monster) so he appears to pass through the gate.
+function drawGates(camX, part) {
+  if (!gateReady()) return;
+  const gh = GATE.screenH, s = gh / GATE.H, gw = GATE.W * s;
+  const top = groundY - gh + GATE.sink;
+  const sp = GATE.split;
+  for (let k = 1; k < ZONES.length; k++) {
+    const bx = k * ZONE_LEN - camX;                 // boundary (opening center) on screen
+    if (bx < -gw || bx > W + gw) continue;
+    const left = bx - GATE.openCx * gw;
+    if (part === "back") {
+      // seam mask: hide the hard plate cut behind the archway opening
+      const grad = ctx.createLinearGradient(bx - 55, 0, bx + 55, 0);
+      grad.addColorStop(0, "rgba(6,8,16,0)");
+      grad.addColorStop(0.5, "rgba(6,8,16,0.92)");
+      grad.addColorStop(1, "rgba(6,8,16,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(bx - 55, top + gh * 0.12, 110, H - (top + gh * 0.12));
+      // left half of the gate
+      ctx.drawImage(gateImg, 0, 0, GATE.W * sp, GATE.H, left, top, gw * sp, gh);
+      // single-frame lightning zap in the middle of the opening (behind the monster)
+      if (zapReady()) {
+        const zfw = zapImg.naturalWidth / ZAP.frames;
+        const zh = ZAP.screenH, zw = zfw * (zh / zapImg.naturalHeight);
+        ctx.drawImage(zapImg, 0, 0, Math.floor(zfw), zapImg.naturalHeight, bx - zw / 2, (top + gh * 0.42) - zh / 2, zw, zh);
+      }
+    } else {
+      // right half (right post + chevron panel) — occludes the monster
+      ctx.drawImage(gateImg, GATE.W * sp, 0, GATE.W * (1 - sp), GATE.H, left + gw * sp, top, gw * (1 - sp), gh);
+    }
+  }
+}
+
+/* Finish flag, drawn in code: a pole + a pennant that ripples in the wind (sine
+   along its length); once crossed it "lights up" (bright fill + glow ramp). */
+const FLAG = { poleH: 270, screenH: 300 };
+function drawGoalFlag(camX, time) {
+  const fx = FLAG_X - camX;
+  if (fx < -160 || fx > W + 160) return;
+  const topY = groundY - FLAG.poleH;
+  const litT = finished ? Math.min(1, (time - flagLitAt) / 600) : 0;
+
+  // procedural placeholder
+  // pole
+  px(fx, topY, 8, FLAG.poleH, litT > 0 ? "#fff2c2" : "#d8dcf0");
+  // finial
+  ctx.fillStyle = litT > 0 ? "#ffd447" : "#9aa7ff";
+  ctx.beginPath(); ctx.arc(fx + 4, topY - 2, 7, 0, Math.PI * 2); ctx.fill();
+  // rippling pennant
+  const segH = 52, segW = 78;
+  const base = finished ? "#ffd447" : "#1e61f0";
+  if (litT > 0) { ctx.save(); ctx.shadowColor = "rgba(255,212,71,0.8)"; ctx.shadowBlur = 22 * litT; }
+  ctx.fillStyle = base;
+  ctx.beginPath();
+  ctx.moveTo(fx + 8, topY + 6);
+  const N = 8;
+  // top edge — left to right with a travelling ripple
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const wob = Math.sin(time * 0.006 - t * 3.2) * 7 * t;
+    ctx.lineTo(fx + 8 + t * segW, topY + 6 + wob);
+  }
+  // notched right tip
+  ctx.lineTo(fx + 8 + segW - 16, topY + 6 + segH / 2);
+  // bottom edge — right to left
+  for (let i = N; i >= 0; i--) {
+    const t = i / N;
+    const wob = Math.sin(time * 0.006 - t * 3.2) * 7 * t;
+    ctx.lineTo(fx + 8 + t * segW, topY + 6 + segH + wob);
+  }
+  ctx.closePath();
+  ctx.fill();
+  if (litT > 0) ctx.restore();
+}
+
+/* Draw collectibles. Procedural placeholders (spinning coin / faceted diamond)
+   until art lands; if assets/coin.png|diamond.png exist they're used instead.
+   Collected items pop off. */
+function coinArtReady(a) { return a.img.complete && a.img.naturalWidth > 0; }
+function drawCoins(camX, time) {
+  for (let i = 0; i < COINS.length; i++) {
+    const c = COINS[i];
+    if (c.got) continue;
+    const sx = c.x - camX;
+    if (sx < -60 || sx > W + 60) continue;
+    const cy = groundY - c.gy + Math.sin(time * 0.004 + c.x) * 5;   // gentle bob
+    const cfg = c.type === "gem" ? GEM : COIN;
+    if (coinArtReady(cfg)) {
+      const fw = cfg.img.naturalWidth / cfg.frames;
+      const dh = cfg.size, dw = fw * (dh / cfg.img.naturalHeight);
+      const frame = (cfg.still || cfg.frames <= 1) ? 0 : Math.floor(time / 1000 * 10) % cfg.frames;
+      ctx.drawImage(cfg.img, Math.round(frame * fw), 0, Math.floor(fw), cfg.img.naturalHeight, sx - dw / 2, cy - dh / 2, dw, dh);
+      continue;
+    }
+    // procedural fallback
+    const spin = Math.abs(Math.cos(time * 0.004 + c.x));   // 0..1 → coin edge-on flip
+    if (c.type === "gem") {
+      const r = GEM.size * 0.5;
+      ctx.save();
+      ctx.translate(sx, cy);
+      ctx.fillStyle = "#22d3ee";
+      ctx.beginPath();
+      ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, -r * 0.15); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, -r * 0.15);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      ctx.beginPath();
+      ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, -r * 0.15); ctx.lineTo(0, -r * 0.1);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(4,20,30,0.5)"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -r); ctx.lineTo(r * 0.7, -r * 0.15); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, -r * 0.15);
+      ctx.closePath(); ctx.stroke();
+      ctx.restore();
+    } else {
+      const rw = COIN.size * 0.5 * (0.35 + 0.65 * spin);   // squash to fake a spin
+      const rh = COIN.size * 0.5;
+      ctx.fillStyle = "#ffd447";
+      ctx.beginPath(); ctx.ellipse(sx, cy, rw, rh, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#b8860b"; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(sx, cy, rw, rh, 0, 0, Math.PI * 2); ctx.stroke();
+      if (rw > 5) {
+        ctx.fillStyle = "#fff0b8";
+        ctx.beginPath(); ctx.ellipse(sx - rw * 0.25, cy - rh * 0.3, rw * 0.28, rh * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+}
+
+/* ============================================================
+   PLAYER RENDER
+   ============================================================ */
+function drawPlayer(camX, time) {
+  let anim, squashY = 1, squashX = 1;
+  if (player.state === "jump") anim = anims.fly;
+  else if (player.state === "eat") anim = anims.eat;
+  else if (player.state === "duck") { anim = anims.idle; squashY = 0.62; squashX = 1.15; }
+  else if (player.state === "run") anim = anims.run;
+  else if (player.state === "walk") anim = anims.walk;
+  else anim = anims.idle;
+  if (!anim.ready) return;
+
+  let frame = Math.floor(player.animTime * anim.fps) % anim.frames;
+  if (player.state === "duck") frame = 2; // eyes-closed brace frame
+  else if (player.state === "eat") frame = Math.min(Math.floor(player.animTime * anim.fps), anim.frames - 1); // one-shot, hold last bite
+
+  const drawH = PLAYER_H * squashY;
+  const drawW = anim.fw * (PLAYER_H / anim.fh) * squashX;
+  const feetY = groundY + 6 - player.y;
+  const cx = player.x - camX;
+
+  // shadow (shrinks with height)
+  const shrink = Math.max(0.35, 1 - player.y / 420);
+  ctx.fillStyle = `rgba(0,0,0,${0.35 * shrink})`;
+  ctx.beginPath();
+  ctx.ellipse(cx, groundY + 8, drawW * 0.3 * shrink, 8 * shrink, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  if (player.facing === -1) {
+    ctx.translate(cx, 0);
+    ctx.scale(-1, 1);
+    ctx.translate(-cx, 0);
+  }
+  ctx.drawImage(anim.img, frame * anim.fw, 0, anim.fw, anim.fh,
+                cx - drawW / 2, feetY - drawH, drawW, drawH);
+  ctx.restore();
+
+  if (player.state === "eat" && player.animTime > 0.6) {
+    drawNomBubble(cx, feetY - drawH);
+  }
+}
+
+/* ============================================================
+   MAIN LOOP
+   ============================================================ */
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+
+  const grounded = player.y <= 0;
+  const ducking = grounded && keys.down;
+
+  // teleport: input is ignored mid-poof; arrive with a second burst
+  if (teleport) {
+    wantJump = false;
+    if (now >= teleport.until) {
+      player.x = teleport.targetX;
+      player.y = 0;
+      player.vy = 0;
+      spawnPoof(player.x, groundY);
+      teleport = null;
+    }
+  }
+
+  // cookie time freezes movement until the last bite
+  if (eating > 0) {
+    eating = Math.max(0, eating - dt);
+    wantJump = false;
+  }
+
+  // horizontal
+  let dir = 0;
+  let running;
+  if (scrolly && !keysEnabled && !manualDriving() && !teleport) {
+    // scroll-driven: ease player.x toward the target the parent posts; walk
+    // when close, run when far so big jumps (nav clicks) read as a sprint.
+    const dx = scrollTargetX - player.x;
+    const adx = Math.abs(dx);
+    scrollyRunning = adx > 640;
+    running = scrollyRunning;
+    if (adx > 3) {
+      dir = dx > 0 ? 1 : -1;
+      player.facing = dir;
+      const speed = scrollyRunning ? RUN_SPEED : WALK_SPEED;
+      const prevX = player.x;
+      player.x += dir * Math.min(adx, speed * dt);
+      player.x = Math.max(120, Math.min(WORLD_LENGTH - 120, player.x));
+      for (let k = 1; k < ZONES.length; k++) {
+        const gx = k * ZONE_LEN;
+        if ((prevX < gx && player.x >= gx) || (prevX > gx && player.x <= gx)) { spawnPoof(gx, groundY); break; }
+      }
+    }
+  } else {
+    if (!teleport && eating === 0 && keys.right) dir += 1;
+    if (!teleport && eating === 0 && keys.left) dir -= 1;
+    running = (dir === 1 && runLatch.right) || (dir === -1 && runLatch.left);
+    if (dir !== 0 && !ducking) {
+      endControls();
+      player.facing = dir;
+      const prevX = player.x;
+      player.x += dir * (running ? RUN_SPEED * runMult : WALK_SPEED) * dt;
+      player.x = Math.max(120, Math.min(WORLD_LENGTH - 120, player.x));
+      // running through a gate: sparkle burst + 1.5× run speed
+      for (let k = 1; k < ZONES.length; k++) {
+        const gx = k * ZONE_LEN;
+        if ((prevX < gx && player.x >= gx) || (prevX > gx && player.x <= gx)) {
+          spawnPoof(gx, groundY);
+          if (running && !boostedGates.has(k)) {
+            runMult = Math.min(runMult * 1.2, RUN_MULT_MAX);
+            boostedGates.add(k);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // while the player is driving in the embed, keep the article target pinned to
+  // the monster (so releasing controls doesn't snap him) and post his position up
+  if (scrolly && manualDriving()) { scrollTargetX = player.x; postWorldX(); }
+
+  // vertical — one jump from the ground, one more mid-air (double jump)
+  if (wantJump && !ducking) {
+    if (grounded) {
+      player.vy = JUMP_VELOCITY;
+      jumps = 1;
+      startGame();
+      endControls();
+    } else if (jumps === 1) {
+      player.vy = JUMP_VELOCITY * 0.92;
+      jumps = 2;
+    }
+  }
+  wantJump = false;
+  if (grounded && player.vy === 0) jumps = 0;
+  if (player.y > 0 || player.vy > 0) {
+    player.vy -= GRAVITY * dt;
+    player.y += player.vy * dt;
+    if (player.y <= 0) { player.y = 0; player.vy = 0; }
+  }
+
+  // state
+  const airborne = player.y > 0;
+  const prevState = player.state;
+  player.state = airborne ? "jump"
+               : eating > 0 ? "eat"
+               : ducking ? "duck"
+               : dir !== 0 ? (running ? "run" : "walk")
+               : "idle";
+  if (player.state !== prevState) player.animTime = 0;
+  player.animTime += dt;
+
+  // camera
+  const camX = Math.max(0, Math.min(player.x - W * 0.4, WORLD_LENGTH - W));
+  worldEl.style.transform = `translateX(${-camX}px)`;
+
+  updateCards(camX);
+
+  // collectibles — AABB against the monster's body box
+  if (!teleport) {
+    const feetY = groundY - player.y;
+    const bodyCx = player.x, bodyCy = feetY - PLAYER_H * 0.5;
+    for (let i = 0; i < COINS.length; i++) {
+      const c = COINS[i];
+      if (c.got) continue;
+      const cy = groundY - c.gy;
+      const reach = (c.type === "gem" ? GEM.size : COIN.size) * 0.5 + 44;
+      if (Math.abs(c.x - bodyCx) < reach && Math.abs(cy - bodyCy) < PLAYER_H * 0.5 + reach * 0.5) {
+        c.got = true;
+        score += c.type === "gem" ? GEM_VALUE : COIN_VALUE;
+        bumpHiScore();
+        updateScoreHud();
+        spawnPoof(c.x, cy + PLAYER_H * 0.5);   // burst centered on the coin
+      }
+    }
+  }
+
+  // speedrun timer: starts on the first movement, ticks until the flag
+  if (runStart === 0 && started && player.x !== START_X) runStart = now;
+  if (runStart !== 0 && !finished) runMs = now - runStart;
+
+  // finish line — cross the flag once → light it up + celebrate. The −8 epsilon
+  // covers scroll-ease stopping a few px short of the target in the embed.
+  if (!finished && player.x >= FLAG_X - 8) {
+    finished = true;
+    flagLitAt = now;
+    if (runStart !== 0) runMs = now - runStart;   // freeze the final time
+    bumpBestTime();
+    bumpHiScore();
+    spawnPoof(FLAG_X, groundY);
+    spawnPoof(FLAG_X + 40, groundY - 120);
+    showComplete();
+  }
+
+  // level progress drives the nav/minimap only — no on-screen timer or % readout
+  // (kept off the top bar so players aren't pressured; the time shows in results)
+  maxX = Math.max(maxX, player.x);
+  updateLevelUI();
+
+  drawScene(camX, now);
+  if (!teleport) drawPlayer(camX, now);
+  drawGates(camX, "front");   // right posts occlude the monster → "through the gate"
+  drawCoins(camX, now);
+  updateSparks(dt, camX);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

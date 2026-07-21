@@ -86,17 +86,17 @@
   .l-title { position: relative; z-index: 2; padding: 0 clamp(20px, 5vw, 64px); }
   .l-title canvas { display: block; margin: 0 auto; height: auto; }
   .l-title canvas.speedrunning { width: min(86vw, 1000px); }
-  .l-title canvas.software { width: min(60vw, 700px); margin-top: 1vw; }
+  .l-title canvas.software { width: min(60vw, 700px); }
   .l-by { position: relative; z-index: 2; margin-top: 30px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-subtle); }
   /* "(any%)" speedrun category, set beside SOFTWARE; fades in 800ms after load */
-  .l-swwrap { position: relative; width: fit-content; margin: 0 auto; }
+  .l-swwrap { position: relative; width: fit-content; margin: 1vw auto 0; }
   .l-any {
-    position: absolute; left: 100%; bottom: 24%; margin-left: clamp(8px, 1vw, 18px);
-    font-family: var(--font-sans); font-weight: 400; text-transform: uppercase; letter-spacing: 0;
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: clamp(8px, 1vw, 18px);
+    font-family: var(--font-sans); font-weight: 400; text-transform: uppercase; letter-spacing: 0.02em;
     white-space: nowrap; line-height: 1; color: #3b82f6; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
     font-size: clamp(10px, 1.44vw, 20px); opacity: 0; animation: anyIn 0.6s ease 0.8s forwards;
   }
-  @keyframes anyIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes anyIn { from { opacity: 0; } to { opacity: 1; } }
   .l-choices { position: relative; z-index: 2; margin-top: 40px; display: inline-flex; border: 0.5px solid var(--hairline-strong); border-radius: var(--radius-button); overflow: hidden; }
   .l-choices button {
     font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.02em;
